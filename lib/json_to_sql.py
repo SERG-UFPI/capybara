@@ -88,6 +88,16 @@ def insertRepositorysCommand(keys, values, json_file):
     return sql
 
 
+# def insertRepositorysRelationshipCommand():
+#     sql = f"""
+#         INSERT INTO
+#             repository_commits_issues_pullrequests (owner, repository, commit, id_issue, id_pull_request,)
+#         VALUES
+#             (%s, %s);
+#     """
+#     return sql
+
+
 def insertRepositorysRelationshipCommand(cursor, values, table_referenced):
     relationship_table = ""
     atributte = ""
@@ -134,8 +144,7 @@ def _createRelationshipTable(connection, cursor, keys):
     connection.commit()
 
 
-def _insert(new_values, keys, values, attributes, cursor, connection,
-            category):
+def _insert(new_values, keys, values, attributes, cursor, connection, category):
     table = 'repositorys' if category == 'repository' else category
     if table == "commits":
         sql = insertCommitsCommand(keys, values, attributes)
@@ -168,8 +177,8 @@ def jsonToSql(connection, tables, repository):
         keys = [key for key in attributes]
 
         try:
-            _createTable(tables, keys, attributes, category, connection,
-                         cursor)
+            _createTable(tables, keys, attributes,
+                         category, connection, cursor)
             print(f"CREATED TABLE {category}")
         except Exception as e:
             print(f" # Erro na criação da tabela: {e}")

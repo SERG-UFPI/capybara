@@ -1,3 +1,7 @@
+'''
+@Author: Max Nícolas de Oliveira Lima
+
+'''
 import psycopg2
 import json
 import os
@@ -14,19 +18,15 @@ def getCommits(user_owner, repo_name):
 
 
 def getIssues(user_owner, repo_name, tokens):
-    repo = GitHub(owner=user_owner,
-                  repository=repo_name,
-                  api_token=tokens,
-                  sleep_for_rate=True)
+    repo = GitHub(owner=user_owner, repository=repo_name,
+                  api_token=tokens, sleep_for_rate=True)
     issues = repo.fetch(category="issue")
     return issues
 
 
 def getPRs(user_owner, repo_name, tokens):
-    repo = GitHub(owner=user_owner,
-                  repository=repo_name,
-                  api_token=tokens,
-                  sleep_for_rate=True)
+    repo = GitHub(owner=user_owner, repository=repo_name,
+                  api_token=tokens, sleep_for_rate=True)
     prs = repo.fetch(category="pull_request")
     return prs
 
@@ -43,9 +43,15 @@ def getColumnsTable(cursor):
         type_column = row[7]
 
         if table in tables:
-            tables[table].append({"name": row[3], "type": row[7]})
+            tables[table].append({
+                "name": row[3],
+                "type": row[7]
+            })
         else:
-            tables[table] = [{"name": row[3], "type": row[7]}]
+            tables[table] = [{
+                "name": row[3],
+                "type": row[7]
+            }]
 
     return tables
 
@@ -79,7 +85,10 @@ def checkRepoExists(user_owner, repo_name, cursor):
 
 
 def generateRepository(user_owner, repo_name):
-    yield {'data': {'owner': user_owner, 'repository': repo_name}}
+    yield {'data': {
+        'owner': user_owner,
+        'repository': repo_name
+    }}
 
 
 def run(owner, repository):
@@ -105,8 +114,11 @@ def run(owner, repository):
     if repositorys is None:
         print("GETING DATA...")
 
-        repository_info = list(generateRepository(owner, repository))
+        commits = {}
+        issues = {}
+        pullrequests = {}
 
+        repository_info = list(generateRepository(owner, repository))
         print("RETRIEVING COMMITS...")
         commits = list(getCommits(owner, repository))
         print("COMMITS RETRIEVED")
@@ -129,9 +141,5 @@ def run(owner, repository):
         print("DATA FETCHED!")
 
         tables = getColumnsTable(cursor)
-        try:
-            jsonToSql(conn, tables, repository)
-        except Exception as e:
-            raise e
-
+        jsonToSql(conn, tables, repository)
     conn.close()
