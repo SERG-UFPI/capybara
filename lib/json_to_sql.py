@@ -85,6 +85,25 @@ def insertRepositorysCommand(keys, values, json_file):
     return sql
 
 
+def insertRepositorysRelationshipCommand(cursor, values, table_referenced):
+    relationship_table = ""
+    atributte = ""
+    if table_referenced == "issues":
+        relationship_table = "repository_issues"
+        atributte = "id_issue"
+    elif table_referenced == "pullrequests":
+        relationship_table = "repository_pullrequests"
+        atributte = "id_pull_request"
+    elif table_referenced == "commits":
+        relationship_table = "repository_commits"
+        atributte = "commit"
+    sql = f"""
+    INSERT INTO {relationship_table} (owner, repository, {atributte})
+    VALUES (%s, %s, %s);"""
+
+    cursor.execute(sql, values)
+
+
 def _createTable(tables, keys, attributes, category, connection, cursor):
     table = 'repositorys' if category == 'repository' else category
     if table in tables:
