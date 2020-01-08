@@ -12,21 +12,25 @@ from perceval.backends.core.git import Git
 
 def getCommits(user_owner, repo_name):
     repo = Git(f"https://github.com/{user_owner}/{repo_name}.git",
-               f"https://github.com/{user_owner}/{repo_name}.git")
+               "./gitlog.log")
     commits = repo.fetch()
     return commits
 
 
 def getIssues(user_owner, repo_name, tokens):
-    repo = GitHub(owner=user_owner, repository=repo_name,
-                  api_token=tokens, sleep_for_rate=True)
+    repo = GitHub(owner=user_owner,
+                  repository=repo_name,
+                  api_token=tokens,
+                  sleep_for_rate=True)
     issues = repo.fetch(category="issue")
     return issues
 
 
 def getPRs(user_owner, repo_name, tokens):
-    repo = GitHub(owner=user_owner, repository=repo_name,
-                  api_token=tokens, sleep_for_rate=True)
+    repo = GitHub(owner=user_owner,
+                  repository=repo_name,
+                  api_token=tokens,
+                  sleep_for_rate=True)
     prs = repo.fetch(category="pull_request")
     return prs
 
@@ -43,15 +47,9 @@ def getColumnsTable(cursor):
         type_column = row[7]
 
         if table in tables:
-            tables[table].append({
-                "name": row[3],
-                "type": row[7]
-            })
+            tables[table].append({"name": row[3], "type": row[7]})
         else:
-            tables[table] = [{
-                "name": row[3],
-                "type": row[7]
-            }]
+            tables[table] = [{"name": row[3], "type": row[7]}]
 
     return tables
 
@@ -85,10 +83,7 @@ def checkRepoExists(user_owner, repo_name, cursor):
 
 
 def generateRepository(user_owner, repo_name):
-    yield {'data': {
-        'owner': user_owner,
-        'repository': repo_name
-    }}
+    yield {'data': {'owner': user_owner, 'repository': repo_name}}
 
 
 def run(owner, repository):
