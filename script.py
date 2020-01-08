@@ -28,6 +28,25 @@ def getPRs(user_owner, repo_name, tokens):
     return prs
 
 
+def getColumnsTable(cursor):
+    cursor.execute("""SELECT *
+               FROM information_schema.columns
+               WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
+               ORDER BY table_schema, table_name""")
+    tables = {}
+    for row in cursor:
+        table = row[2]
+        column = row[3]
+        type_column = row[7]
+
+        if table in tables:
+            tables[table].append({"name": row[3], "type": row[7]})
+        else:
+            tables[table] = [{"name": row[3], "type": row[7]}]
+
+    return tables
+
+
 def checkRepoExists(user_owner, repo_name, cursor):
     sql = f"""
         SELECT EXISTS (
@@ -96,5 +115,16 @@ def run(owner, repository):
         print("RETRIEVING PULL_REQUESTS...")
         pullrequests = list(getPRs(owner, repository, tokens))
         print("PULL_REQUESTS RETRIEVED")
+
+        repository = {
+            "repository": repository_info,
+            "commits": commits,
+            "issues": issues,
+            "pullrequests": pullrequests
+        }
+
+        print("DATA FETCHED!")
+
+        tables = getColumnsTable(cursor)
 
     conn.close()
