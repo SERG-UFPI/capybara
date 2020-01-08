@@ -26,6 +26,10 @@ def checkRepoExists(user_owner, repo_name, cursor):
     return None
 
 
+def generateRepository(user_owner, repo_name):
+    yield {'data': {'owner': user_owner, 'repository': repo_name}}
+
+
 def run(owner, repository):
     data_base_url = os.environ.get("DATABASE_URL")
     conn = psycopg2.connect(data_base_url, sslmode='require')
@@ -45,5 +49,10 @@ def run(owner, repository):
             break
 
     repositorys = checkRepoExists(owner, repository, cursor)
+
+    if repositorys is None:
+        print("GETING DATA...")
+
+        repository_info = list(generateRepository(owner, repository))
 
     conn.close()
