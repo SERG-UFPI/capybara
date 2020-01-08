@@ -1,4 +1,4 @@
-from flask import *
+from flask import Flask, render_template, request, jsonify
 from script import run
 
 app = Flask(__name__)
@@ -6,8 +6,9 @@ app.config['JSON_SORT_KEYS'] = False
 
 
 @app.route('/')
-def inicio():
-    return render_template('home.html')
+def index():
+    return jsonify({"status": "ok"})
+    # return render_template('home.html')
 
 
 # Insert new repository to database
@@ -25,9 +26,14 @@ def insert_repository():
                     "error":
                     "É necessário que seja informado no body o nome do repositório a ser inserido!"
                 })
+            # if not "tokens" in request.json:
+            #     return jsonify({
+            #         "error": "É necessário que seja informada no body uma lista de tokens para correta execução da ferramenta!"
+            #     })
 
             owner = request.json["owner"]
             repository = request.json["repository"]
+            # tokens = request.json["tokens"]
             run(owner, repository)
             return jsonify({"success": True})
         except Exception as e:
