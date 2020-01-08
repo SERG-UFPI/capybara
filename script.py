@@ -1,5 +1,6 @@
 import psycopg2
 from perceval.backends.core.git import Git
+from perceval.backends.core.github import GitHub
 
 
 def getCommits(user_owner, repo_name):
@@ -7,6 +8,15 @@ def getCommits(user_owner, repo_name):
                f"https://github.com/{user_owner}/{repo_name}.git")
     commits = repo.fetch()
     return commits
+
+
+def getIssues(user_owner, repo_name, tokens):
+    repo = GitHub(owner=user_owner,
+                  repository=repo_name,
+                  api_token=tokens,
+                  sleep_for_rate=True)
+    issues = repo.fetch(category="issue")
+    return issues
 
 
 def checkRepoExists(user_owner, repo_name, cursor):
@@ -69,5 +79,9 @@ def run(owner, repository):
         print("RETRIEVING COMMITS...")
         commits = list(getCommits(owner, repository))
         print("COMMITS RETRIEVED")
+
+        print("RETRIEVING ISSUES...")
+        issues = list(getIssues(owner, repository, tokens))
+        print("ISSUES RETRIEVED")
 
     conn.close()
