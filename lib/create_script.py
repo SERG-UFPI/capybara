@@ -33,3 +33,30 @@ def createTableScript(keys, cursor, json_file, table):
                 sql += f"{key}, "
     sql += "\n);"
     cursor.execute(sql)
+
+
+def createRelationshipCommitsRepositorysScript(cursor, repository_keys):
+    sql = """
+    CREATE TABLE IF NOT EXISTS repository_commits (
+        key SERIAL,
+        commit TEXT"""
+
+    for key in repository_keys:
+        sql += f",\n\t{key} TEXT"
+
+    sql += ","
+
+    sql += """
+        FOREIGN KEY (commit) REFERENCES commits (commit)"""
+
+    sql += f",\n\tFOREIGN KEY (owner, repository) REFERENCES repositorys (owner, repository)"
+
+    sql += """,
+        PRIMARY KEY (commit"""
+
+    for key in repository_keys:
+        sql += f", {key}"
+
+    sql += ")\n);"
+
+    cursor.execute(sql)
