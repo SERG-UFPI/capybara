@@ -1,6 +1,9 @@
 import psycopg2
-from perceval.backends.core.git import Git
+import json
+import os
+from lib.json_to_sql import jsonToSql
 from perceval.backends.core.github import GitHub
+from perceval.backends.core.git import Git
 
 
 def getCommits(user_owner, repo_name):
