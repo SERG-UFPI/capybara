@@ -25,6 +25,26 @@ def insertCommitsCommand(keys, values, json_file):
     return sql
 
 
+def insertIssuesCommand(keys, values, json_file):
+    sql = "INSERT INTO issues ("
+    for i in range(len(keys)):
+        atribute_name = keys[i].lower().replace("-", "_")
+        if atribute_name == "user":
+            atribute_name = "user_info"
+        if i == len(keys) - 1:
+            sql += f"{atribute_name}"
+        else:
+            sql += f"{atribute_name}, "
+    sql += ") VALUES (\n"
+    for i in range(len(keys)):
+        if i == len(keys) - 1:
+            sql += "%s);"
+        else:
+            sql += "%s, "
+
+    return sql
+
+
 def _createTable(tables, keys, attributes, category, connection, cursor):
     table = 'repositorys' if category == 'repository' else category
     if table in tables:
