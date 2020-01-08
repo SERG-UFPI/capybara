@@ -19,6 +19,15 @@ def getIssues(user_owner, repo_name, tokens):
     return issues
 
 
+def getPRs(user_owner, repo_name, tokens):
+    repo = GitHub(owner=user_owner,
+                  repository=repo_name,
+                  api_token=tokens,
+                  sleep_for_rate=True)
+    prs = repo.fetch(category="pull_request")
+    return prs
+
+
 def checkRepoExists(user_owner, repo_name, cursor):
     sql = f"""
         SELECT EXISTS (
@@ -83,5 +92,9 @@ def run(owner, repository):
         print("RETRIEVING ISSUES...")
         issues = list(getIssues(owner, repository, tokens))
         print("ISSUES RETRIEVED")
+
+        print("RETRIEVING PULL_REQUESTS...")
+        pullrequests = list(getPRs(owner, repository, tokens))
+        print("PULL_REQUESTS RETRIEVED")
 
     conn.close()
