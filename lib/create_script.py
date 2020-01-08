@@ -60,3 +60,30 @@ def createRelationshipCommitsRepositorysScript(cursor, repository_keys):
     sql += ")\n);"
 
     cursor.execute(sql)
+
+
+def createRelationshipIssuesRepositorysScript(cursor, repository_keys):
+    sql = """
+    CREATE TABLE IF NOT EXISTS repository_issues (
+        key SERIAL,
+        id_issue INTEGER"""
+
+    for key in repository_keys:
+        sql += f",\n\t{key} TEXT"
+
+    sql += ","
+
+    sql += """
+        FOREIGN KEY (id_issue) REFERENCES issues (id)"""
+
+    sql += f",\n\tFOREIGN KEY (owner, repository) REFERENCES repositorys (owner, repository)"
+
+    sql += """,
+        PRIMARY KEY (id_issue"""
+
+    for key in repository_keys:
+        sql += f", {key}"
+
+    sql += ")\n);"
+
+    cursor.execute(sql)
