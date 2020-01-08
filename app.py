@@ -36,7 +36,7 @@ def insert_repository():
             run(owner, repository)
             return jsonify({"success": True})
         except Exception as e:
-            return jsonify({"error": e})
+            return jsonify({"error": str(e)})
 
 
 if __name__ == '__main__':
