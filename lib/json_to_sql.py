@@ -22,6 +22,13 @@ def _createTable(tables, keys, attributes, category, connection, cursor):
         connection.commit()
 
 
+def _createRelationshipTable(connection, cursor, keys):
+    createRelationshipCommitsRepositorysScript(cursor, keys)
+    createRelationshipIssuesRepositorysScript(cursor, keys)
+    createRelationshipPullRequestsRepositorysScript(cursor, keys)
+    connection.commit()
+
+
 def jsonToSql(connection, tables, repository):
     print("PARSING TO SQL...")
     cursor = connection.cursor()
@@ -45,3 +52,17 @@ def jsonToSql(connection, tables, repository):
             print(f"CREATED TABLE {category}")
         except Exception as e:
             print(f" # Erro na criação da tabela: {e}")
+
+    for item in repository["repository"]:
+        attributes = {}
+        for key, value in item['data'].items():
+            if not (value is None):
+                attributes[key] = value
+
+        keys = [key for key in attributes]
+
+        try:
+            _createRelationshipTable(connection, cursor, keys)
+            print(f"CREATED RELATIONSHIP TABLES")
+        except Exception as e:
+            print(f" # Erro na criação de tabelas de relacionamento: {e}")
