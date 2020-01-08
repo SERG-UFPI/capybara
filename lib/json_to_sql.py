@@ -2,6 +2,29 @@ from lib.create_script import createTableScript, createRelationshipCommitsReposi
 from lib.alter_script import alterTableScript
 
 
+def insertCommitsCommand(keys, values, json_file):
+    sql = "INSERT INTO commits ("
+    for i in range(len(keys)):
+        atribute_name = keys[i].lower().replace("-", "_")
+        if keys[i] == "Commit":
+            atribute_name = "commiter"
+        elif atribute_name == "user":
+            atribute_name = "user_info"
+        if i == len(keys) - 1:
+            sql += f"{atribute_name}"
+        else:
+            sql += f"{atribute_name}, "
+    sql += ") VALUES (\n"
+    for i in range(len(keys)):
+        # t = type(json_file[keys[i]])
+        if i == len(keys) - 1:
+            sql += "%s);"
+        else:
+            sql += "%s, "
+
+    return sql
+
+
 def _createTable(tables, keys, attributes, category, connection, cursor):
     table = 'repositorys' if category == 'repository' else category
     if table in tables:
