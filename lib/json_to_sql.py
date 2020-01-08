@@ -184,3 +184,36 @@ def jsonToSql(connection, tables, repository):
             print(f"CREATED RELATIONSHIP TABLES")
         except Exception as e:
             print(f" # Erro na criação de tabelas de relacionamento: {e}")
+
+    # Inserção de items do db
+    for category in repository:
+        attributes = {}
+        for item in repository[category]:
+            attributes = item['data']
+            keys = []
+            for key in attributes:
+                if attributes[key] is not None:
+                    keys.append(key)
+
+            values = []
+            for key in attributes:
+                if attributes[key] is not None:
+                    values.append(attributes[key])
+
+            new_values = [json.dumps(v, ensure_ascii=False) if (
+                type(v) is dict or type(v) is list) else v for v in values]
+
+            try:
+                _insert(new_values, keys, values, attributes,
+                        cursor, connection, category)
+                if category != "repository":
+                    if category == "commits":
+                        insertRepositorysRelationshipCommand(
+                            cursor, (owner_name, repository_name, attributes["commit"]), category)
+                    else:
+                        insertRepositorysRelationshipCommand(
+                            cursor, (owner_name, repository_name, attributes["id"]), category)
+
+                print(f"INSERTED DATA IN DB {category}")
+            except Exception as e:
+                print(f" # Erro na inserção de dados: {e}")
