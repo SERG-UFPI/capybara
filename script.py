@@ -129,5 +129,6 @@ def run(owner, repository):
         print("DATA FETCHED!")
 
         tables = getColumnsTable(cursor)
+        jsonToSql(conn, tables, repository)
 
     conn.close()
