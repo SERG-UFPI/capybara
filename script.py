@@ -129,6 +129,9 @@ def run(owner, repository):
         print("DATA FETCHED!")
 
         tables = getColumnsTable(cursor)
-        jsonToSql(conn, tables, repository)
+        try:
+            jsonToSql(conn, tables, repository)
+        except Exception as e:
+            raise e
 
     conn.close()
