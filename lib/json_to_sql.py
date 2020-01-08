@@ -131,6 +131,22 @@ def _createRelationshipTable(connection, cursor, keys):
     connection.commit()
 
 
+def _insert(new_values, keys, values, attributes, cursor, connection,
+            category):
+    table = 'repositorys' if category == 'repository' else category
+    if table == "commits":
+        sql = insertCommitsCommand(keys, values, attributes)
+    elif table == "issues":
+        sql = insertIssuesCommand(keys, values, attributes)
+    elif table == "pullrequests":
+        sql = insertPRsCommand(keys, values, attributes)
+    elif table == "repositorys":
+        sql = insertRepositorysCommand(keys, values, attributes)
+
+    cursor.execute(sql, new_values)
+    connection.commit()
+
+
 def jsonToSql(connection, tables, repository):
     print("PARSING TO SQL...")
     cursor = connection.cursor()
