@@ -7,8 +7,7 @@ app.config['JSON_SORT_KEYS'] = False
 
 @app.route('/')
 def index():
-    return jsonify({"status": "ok"})
-    # return render_template('home.html')
+    return render_template('home.html')
 
 
 # Insert new repository to database
