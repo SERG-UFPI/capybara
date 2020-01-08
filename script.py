@@ -1,3 +1,14 @@
+import psycopg2
+from perceval.backends.core.git import Git
+
+
+def getCommits(user_owner, repo_name):
+    repo = Git(f"https://github.com/{user_owner}/{repo_name}.git",
+               f"https://github.com/{user_owner}/{repo_name}.git")
+    commits = repo.fetch()
+    return commits
+
+
 def checkRepoExists(user_owner, repo_name, cursor):
     sql = f"""
         SELECT EXISTS (
@@ -54,5 +65,9 @@ def run(owner, repository):
         print("GETING DATA...")
 
         repository_info = list(generateRepository(owner, repository))
+
+        print("RETRIEVING COMMITS...")
+        commits = list(getCommits(owner, repository))
+        print("COMMITS RETRIEVED")
 
     conn.close()
