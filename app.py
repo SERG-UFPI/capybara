@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-from script import run
+from script import run, returnIssues
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
@@ -35,6 +35,31 @@ def insert_repository():
             # tokens = request.json["tokens"]
             run(owner, repository)
             return jsonify({"success": True})
+        except Exception as e:
+            return jsonify({"error": str(e)})
+
+
+@app.route('/issues', methods=["GET"])
+def get_issues():
+    if request.method == "GET":
+        try:
+            if not "owner" in request.json:
+                return jsonify({
+                    "error":
+                    "É necessário que seja informado no body o dono do repositório a ser recuperado!"
+                })
+            if not "repository" in request.json:
+                return jsonify({
+                    "error":
+                    "É necessário que seja informado no body o nome do repositório a ser recuperado!"
+                })
+
+            owner = request.json["owner"]
+            repository = request.json["repository"]
+            limit = request.json["limit"] if "limit" in request.json else None
+
+            issues = returnIssues(owner, repository, limit)
+            return jsonify(issues)
         except Exception as e:
             return jsonify({"error": str(e)})
 
