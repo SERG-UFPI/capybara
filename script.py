@@ -86,6 +86,53 @@ def generateRepository(user_owner, repo_name):
     yield {'data': {'owner': user_owner, 'repository': repo_name}}
 
 
+def returnPullRequests(owner, repository, limit):
+    data_base_url = os.environ.get("DATABASE_URL")
+    # conn = psycopg2.connect(data_base_url, sslmode='require')
+    conn = psycopg2.connect(data_base_url)
+    cursor = conn.cursor()
+
+    tables = getColumnsTable(cursor)
+
+    columns = [atrib["name"] for atrib in tables["pullrequests"]]
+
+    rows_to_fecth = ""
+
+    for column in columns:
+        if column == columns[-1]:
+            rows_to_fecth += f"pullrequests.{column}"
+        else:
+            rows_to_fecth += f"pullrequests.{column}, "
+
+    sql = f"""
+    SELECT
+        {rows_to_fecth}
+    FROM
+        pullrequests,
+        repository_pullrequests
+    WHERE
+        repository_pullrequests.owner = %s AND
+        repository_pullrequests.repository = %s AND
+        repository_pullrequests.id_pull_request = pullrequests.id
+    LIMIT {"null" if limit is None else limit};
+    """
+    cursor.execute(sql, (owner, repository))
+    lines = cursor.fetchall()
+
+    result = []
+
+    for line in lines:
+        temp = {}
+
+        for i in range(len(line)):
+            temp[columns[i]] = line[i]
+        result.append(temp)
+
+    cursor.close()
+    conn.close()
+    return result
+
+
 def run(owner, repository):
     data_base_url = os.environ.get("DATABASE_URL")
     conn = psycopg2.connect(data_base_url, sslmode='require')
