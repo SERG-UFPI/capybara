@@ -86,6 +86,53 @@ def generateRepository(user_owner, repo_name):
     yield {'data': {'owner': user_owner, 'repository': repo_name}}
 
 
+def returnCommits(owner, repository, limit):
+    data_base_url = os.environ.get("DATABASE_URL")
+    conn = psycopg2.connect(data_base_url, sslmode='require')
+    # conn = psycopg2.connect(data_base_url)
+    cursor = conn.cursor()
+
+    tables = getColumnsTable(cursor)
+
+    columns = [atrib["name"] for atrib in tables["commits"]]
+
+    rows_to_fecth = ""
+
+    for column in columns:
+        if column == columns[-1]:
+            rows_to_fecth += f"commits.{column}"
+        else:
+            rows_to_fecth += f"commits.{column}, "
+
+    sql = f"""
+    SELECT
+        {rows_to_fecth}
+    FROM
+        commits,
+        repository_commits
+    WHERE
+        repository_commits.owner = %s AND
+        repository_commits.repository = %s AND
+        repository_commits.commit = commits.commit
+    LIMIT {"null" if limit is None else limit};
+    """
+    cursor.execute(sql, (owner, repository))
+    lines = cursor.fetchall()
+
+    result = []
+
+    for line in lines:
+        temp = {}
+
+        for i in range(len(line)):
+            temp[columns[i]] = line[i]
+        result.append(temp)
+
+    cursor.close()
+    conn.close()
+    return result
+
+
 def run(owner, repository):
     data_base_url = os.environ.get("DATABASE_URL")
     conn = psycopg2.connect(data_base_url, sslmode='require')
