@@ -12,7 +12,7 @@ from perceval.backends.core.git import Git
 
 def getCommits(user_owner, repo_name):
     repo = Git(f"https://github.com/{user_owner}/{repo_name}.git",
-               "./gitlog.log")
+               f"https://github.com/{user_owner}/{repo_name}.git")
     commits = repo.fetch()
     return commits
 
@@ -88,7 +88,9 @@ def generateRepository(user_owner, repo_name):
 
 def run(owner, repository):
     data_base_url = os.environ.get("DATABASE_URL")
-    conn = psycopg2.connect(data_base_url, sslmode='require')
+    print(data_base_url)
+    # conn = psycopg2.connect(data_base_url, sslmode='require')
+    conn = psycopg2.connect(data_base_url)
 
     cursor = conn.cursor()
 
@@ -99,6 +101,7 @@ def run(owner, repository):
     while 1:
         token = os.environ.get(f"TOKEN_{index}")
         if token != None:
+            print(token)
             tokens.append(token)
             index += 1
         else:
@@ -116,6 +119,7 @@ def run(owner, repository):
         repository_info = list(generateRepository(owner, repository))
         print("RETRIEVING COMMITS...")
         commits = list(getCommits(owner, repository))
+        print(commits)
         print("COMMITS RETRIEVED")
 
         print("RETRIEVING ISSUES...")

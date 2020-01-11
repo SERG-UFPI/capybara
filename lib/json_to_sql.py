@@ -144,7 +144,8 @@ def _createRelationshipTable(connection, cursor, keys):
     connection.commit()
 
 
-def _insert(new_values, keys, values, attributes, cursor, connection, category):
+def _insert(new_values, keys, values, attributes, cursor, connection,
+            category):
     table = 'repositorys' if category == 'repository' else category
     if table == "commits":
         sql = insertCommitsCommand(keys, values, attributes)
@@ -176,12 +177,14 @@ def jsonToSql(connection, tables, repository):
 
         keys = [key for key in attributes]
 
+        print(keys)
+
         try:
-            _createTable(tables, keys, attributes,
-                         category, connection, cursor)
+            _createTable(tables, keys, attributes, category, connection,
+                         cursor)
             print(f"CREATED TABLE {category}")
         except Exception as e:
-            print(f" # Erro na criação da tabela: {e}")
+            print(f" # Erro na criação da tabela {category}: {e}")
 
     for item in repository["repository"]:
         attributes = {}
@@ -212,19 +215,24 @@ def jsonToSql(connection, tables, repository):
                 if attributes[key] is not None:
                     values.append(attributes[key])
 
-            new_values = [json.dumps(v, ensure_ascii=False) if (
-                type(v) is dict or type(v) is list) else v for v in values]
+            new_values = [
+                json.dumps(v, ensure_ascii=False) if
+                (type(v) is dict or type(v) is list) else v for v in values
+            ]
 
             try:
-                _insert(new_values, keys, values, attributes,
-                        cursor, connection, category)
+                _insert(new_values, keys, values, attributes, cursor,
+                        connection, category)
                 if category != "repository":
                     if category == "commits":
                         insertRepositorysRelationshipCommand(
-                            cursor, (owner_name, repository_name, attributes["commit"]), category)
+                            cursor, (owner_name, repository_name,
+                                     attributes["commit"]), category)
                     else:
                         insertRepositorysRelationshipCommand(
-                            cursor, (owner_name, repository_name, attributes["id"]), category)
+                            cursor,
+                            (owner_name, repository_name, attributes["id"]),
+                            category)
 
                 print(f"INSERTED DATA IN DB {category}")
             except Exception as e:
