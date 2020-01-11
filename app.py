@@ -1,4 +1,4 @@
-from script import run, returnCommits, returnIssues
+from script import run, returnCommits, returnIssues, returnPullRequests
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
@@ -28,7 +28,6 @@ def insert_repository():
 
             owner = request.json["owner"]
             repository = request.json["repository"]
-            # tokens = request.json["tokens"]
             run(owner, repository)
             return jsonify({"success": True})
         except Exception as e:
@@ -81,6 +80,31 @@ def get_commits():
 
             commits = returnCommits(owner, repository, limit)
             return jsonify(commits)
+        except Exception as e:
+            return jsonify({"error": str(e)})
+
+
+@app.route('/pullrequests', methods=["GET"])
+def get_pull_requests():
+    if request.method == "GET":
+        try:
+            if not "owner" in request.json:
+                return jsonify({
+                    "error":
+                    "É necessário que seja informado no body o dono do repositório a ser recuperado!"
+                })
+            if not "repository" in request.json:
+                return jsonify({
+                    "error":
+                    "É necessário que seja informado no body o nome do repositório a ser recuperado!"
+                })
+
+            owner = request.json["owner"]
+            repository = request.json["repository"]
+            limit = request.json["limit"] if "limit" in request.json else None
+
+            pullrequests = returnPullRequests(owner, repository, limit)
+            return jsonify(pullrequests)
         except Exception as e:
             return jsonify({"error": str(e)})
 
