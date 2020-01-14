@@ -108,8 +108,8 @@ def get_pull_requests():
         except Exception as e:
             return jsonify({"error": str(e)})
 
-@app.route('/repository', methods=["GET"])
-def get_repository():
+@app.route('/repositorys', methods=["GET"])
+def get_repositorys():
     if request.method == "GET":
         try:
             if not "owner" in request.json:
@@ -127,7 +127,7 @@ def get_repository():
             repository = request.json["repository"]
             limit = request.json["limit"] if "limit" in request.json else None
 
-            commits = returnRepository(owner, repository, limit)
+            commits = returnRepositorys(owner, repository, limit)
             return jsonify(commits)
         except Exception as e:
             return jsonify({"error": str(e)})
