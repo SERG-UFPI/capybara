@@ -226,6 +226,47 @@ def returnPullRequests(owner, repository, limit):
     conn.close()
     return result
 
+def returnRepository(owner, repository, limit):
+    data_base_url = os.environ.get("DATABASE_URL")
+    conn = psycopg2.connect(data_base_url, sslmode='require')
+    # conn = psycopg2.connect(data_base_url)
+    cursor = conn.cursor()
+
+    tables = getColumnsTable(cursor)
+
+    columns = [atrib["name"] for atrib in tables["repository"]]
+
+    rows_to_fecth = ""
+
+    for column in columns:
+        if column == columns[-1]:
+            rows_to_fecth += f"repository.{column}"
+        else:
+            rows_to_fecth += f"repository.{column}, "
+
+    sql = f"""
+    SELECT
+        {rows_to_fecth}
+    FROM
+        repository,
+    LIMIT {"null" if limit is None else limit};
+    """
+    cursor.execute(sql, (owner, repository))
+    lines = cursor.fetchall()
+
+    result = []
+
+    for line in lines:
+        temp = {}
+
+        for i in range(len(line)):
+            temp[columns[i]] = line[i]
+        result.append(temp)
+
+    cursor.close()
+    conn.close()
+    return result
+
 
 def run(owner, repository):
     data_base_url = os.environ.get("DATABASE_URL")

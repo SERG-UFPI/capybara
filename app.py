@@ -1,4 +1,4 @@
-from script import run, returnCommits, returnIssues, returnPullRequests
+from script import run, returnCommits, returnIssues, returnPullRequests, returnRepository
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
@@ -108,6 +108,29 @@ def get_pull_requests():
         except Exception as e:
             return jsonify({"error": str(e)})
 
+@app.route('/repository', methods=["GET"])
+def get_repository():
+    if request.method == "GET":
+        try:
+            if not "owner" in request.json:
+                return jsonify({
+                    "error":
+                    "É necessário que seja informado no body o dono do repositório a ser recuperado!"
+                })
+            if not "repository" in request.json:
+                return jsonify({
+                    "error":
+                    "É necessário que seja informado no body o nome do repositório a ser recuperado!"
+                })
+
+            owner = request.json["owner"]
+            repository = request.json["repository"]
+            limit = request.json["limit"] if "limit" in request.json else None
+
+            commits = returnRepository(owner, repository, limit)
+            return jsonify(commits)
+        except Exception as e:
+            return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', threaded=True, port=5000)
