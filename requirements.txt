@@ -3,3 +3,5 @@ perceval
 Flask==1.1.1
 gunicorn
 eventlet
+redis==3.3.11
+rq==1.2.0

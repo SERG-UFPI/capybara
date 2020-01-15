@@ -1,8 +1,14 @@
 from script import run, returnCommits, returnIssues, returnPullRequests
 from flask import Flask, render_template, request, jsonify
 
+from rq import Queue
+from rq.job import Job
+from rq import get_current_job
+from worker import conn
+
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
+q = Queue(connection=conn)
 
 
 @app.route('/')
@@ -28,10 +34,25 @@ def insert_repository():
 
             owner = request.json["owner"]
             repository = request.json["repository"]
-            run(owner, repository)
-            return jsonify({"success": True})
+            job = q.enqueue(run, (owner, repository))
+            return jsonify({"response": "Insertion of this repository is started", "job_key": job.key.decode("utf-8")})
         except Exception as e:
             return jsonify({"error": str(e)})
+
+
+@app.route('/progress/<job_key>', methods=["GET"])
+def get_progress_insertion(job_key):
+    if request.method == "GET":
+        job_key = job_key.replace("rq:job:", "")
+        try:
+            job = Job.fetch(job_key, connection=conn)
+
+            if(not job.is_finished):
+                return "The insertion isn't finished yet!", 202
+            else:
+                return "The insertion is finished!", 200
+        except Exception as e:
+            return str(e), 203
 
 
 @app.route('/issues', methods=["GET"])
