@@ -3,6 +3,7 @@ import os
 import psycopg2
 from lib.create_script import createTableScript, createRelationshipCommitsRepositorysScript, createRelationshipIssuesRepositorysScript, createRelationshipPullRequestsRepositorysScript
 from lib.alter_script import alterTableScript
+from id_linking_algorithms.simple_algorithm import start_simple_algorithm
 
 
 def insertCommitsCommand(keys, values, json_file):
@@ -149,6 +150,7 @@ def _insert(new_values, keys, values, attributes, cursor, connection,
     table = 'repositorys' if category == 'repository' else category
     if table == "commits":
         sql = insertCommitsCommand(keys, values, attributes)
+        start_simple_algorithm()
     elif table == "issues":
         sql = insertIssuesCommand(keys, values, attributes)
     elif table == "pullrequests":
@@ -157,6 +159,37 @@ def _insert(new_values, keys, values, attributes, cursor, connection,
         sql = insertRepositorysCommand(keys, values, attributes)
 
     cursor.execute(sql, new_values)
+    connection.commit()
+
+
+def _createIdentificationTables(connection):
+    cursor = connection.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS identification (
+            id SERIAL UNIQUE,
+            name VARCHAR NOT NULL,
+            email VARCHAR NOT NULL,
+            PRIMARY KEY (name, email)
+        );
+    """)
+    connection.commit()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS map_identification (
+            id SERIAL PRIMARY KEY,
+            id_identification INTEGER REFERENCES identification(id),
+            algorithm VARCHAR NOT NULL
+        );
+    """)
+    connection.commit()
+
+
+def _insertUser(user, connection):
+    cursor = connection.cursor()
+    sql = """
+    INSERT INTO identification (name, email) VALUES (%s, %s);
+    """
+    cursor.execute(sql, (user["name"], user["email"]))
     connection.commit()
 
 
@@ -186,6 +219,8 @@ def jsonToSql(connection, tables, repository):
         except Exception as e:
             print(f" # Erro na criação da tabela {category}: {e}")
 
+    _createIdentificationTables(connection)
+
     for item in repository["repository"]:
         attributes = {}
         for key, value in item['data'].items():
@@ -202,9 +237,21 @@ def jsonToSql(connection, tables, repository):
 
     # Inserção de items do db
     for category in repository:
+        users = []
         attributes = {}
         for item in repository[category]:
             attributes = item['data']
+            if category == "commits":
+                user = attributes["commiter"]
+                i = user.find("<")
+                name = user[0:i].strip()
+                email = user[(i + 1):(len(user) - 1)]
+                user = {"name": name, "email": email"}
+                try:
+                    _insertUser(user, connection)
+                    users.append(user)
+                except Exception:
+                    pass
             keys = []
             for key in attributes:
                 if attributes[key] is not None:
@@ -237,3 +284,4 @@ def jsonToSql(connection, tables, repository):
                 print(f"INSERTED DATA IN DB {category}")
             except Exception as e:
                 print(f" # Erro na inserção de dados: {e}")
+        start_simple_algorithm(users)
