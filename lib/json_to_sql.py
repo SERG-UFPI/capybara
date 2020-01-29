@@ -187,10 +187,44 @@ def _createIdentificationTables(connection):
 def _insertUser(user, connection):
     cursor = connection.cursor()
     sql = """
-    INSERT INTO identification (name, email) VALUES (%s, %s);
+    INSERT INTO identification (id, name, email) VALUES (%s, %s);
     """
-    cursor.execute(sql, (user["name"], user["email"]))
+    cursor.execute(sql, (user["id"], user["name"], user["email"]))
     connection.commit()
+
+def _getExistUsers(connection):
+    sql = """
+        SELECT
+            json_build_object(map_identification.id_identification, json_agg((identification.name, identification.email)))
+        FROM
+            map_identification, identification
+        WHERE
+            map_identification.id_identification = identification.id
+        GROUP BY
+            map_identification.id_identification
+        ;
+    """
+    result = []
+    query = connection.cursor().execute(sql)
+    elements = query.fetchall()
+    for i in elements:
+        tem = []
+        for j in i.values():
+            for w in j:
+                temp.append({"id": int(list(i.keys())[0]), "name": w["f1"], "email": w["f2"]})
+        if len(temp) > 0:
+            result.append(temp)
+    return result
+
+def _insertMapIdentification(map_identification, algorithm):
+    for i in map_identification:
+        sql = f"""
+        INSERT INTO
+            map_identification (id_identification, algorithm)
+        VALUES
+            ({map_identification["id"]}, {algorithm})
+        ;
+    """
 
 
 def jsonToSql(connection, tables, repository):
@@ -284,4 +318,6 @@ def jsonToSql(connection, tables, repository):
                 print(f"INSERTED DATA IN DB {category}")
             except Exception as e:
                 print(f" # Erro na inserção de dados: {e}")
-        start_simple_algorithm(users)
+        values = _getExistUsers(connection)
+        map_identification = start_simple_algorithm(users, values=values)
+        _insertMapIdentification(map_identification)
