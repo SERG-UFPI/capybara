@@ -4,6 +4,7 @@ import psycopg2
 from lib.create_script import createTableScript, createRelationshipCommitsRepositorysScript, createRelationshipIssuesRepositorysScript, createRelationshipPullRequestsRepositorysScript
 from lib.alter_script import alterTableScript
 from id_linking_algorithms.simple_algorithm import start_simple_algorithm
+from id_linking_algorithms.normalizer import normalizer
 
 
 def insertCommitsCommand(keys, values, json_file):
@@ -187,10 +188,16 @@ def _createIdentificationTables(connection):
 def _insertUser(user, connection):
     cursor = connection.cursor()
     sql = """
-    INSERT INTO identification (id, name, email) VALUES (%s, %s);
+    INSERT INTO
+        identification (name, email)
+    VALUES
+        (%s, %s)
+    RETURNING id;
     """
-    cursor.execute(sql, (user["id"], user["name"], user["email"]))
+    cursor.execute(sql, (user["name"], user["email"]))
     connection.commit()
+    id_row = cursor.fetchone()[0]
+    return id_row
 
 def _getExistUsers(connection):
     sql = """
@@ -211,18 +218,18 @@ def _getExistUsers(connection):
         tem = []
         for j in i.values():
             for w in j:
-                temp.append({"id": int(list(i.keys())[0]), "name": w["f1"], "email": w["f2"]})
+                temp.append({"id": int(list(i.keys())[0]), "name": w["f1"], "email": w["f2"], "normalized": normalizer(w["f2"])})
         if len(temp) > 0:
             result.append(temp)
     return result
 
-def _insertMapIdentification(map_identification, algorithm):
+def _insertMapIdentification(id, map_identification, algorithm):
     for i in map_identification:
         sql = f"""
         INSERT INTO
-            map_identification (id_identification, algorithm)
+            map_identification (id, id_identification, algorithm)
         VALUES
-            ({map_identification["id"]}, {algorithm})
+            ({id}, {map_identification["id"]}, {algorithm})
         ;
     """
 
@@ -280,9 +287,10 @@ def jsonToSql(connection, tables, repository):
                 i = user.find("<")
                 name = user[0:i].strip()
                 email = user[(i + 1):(len(user) - 1)]
-                user = {"name": name, "email": email"}
+                user = {"name": name, "email": email}
                 try:
-                    _insertUser(user, connection)
+                    id_user = _insertUser(user, connection)
+                    user["id"] = id_user
                     users.append(user)
                 except Exception:
                     pass

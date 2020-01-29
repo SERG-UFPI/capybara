@@ -229,8 +229,9 @@ def returnPullRequests(owner, repository, limit):
 
 def run(owner, repository):
     data_base_url = os.environ.get("DATABASE_URL")
-    conn = psycopg2.connect(data_base_url, sslmode='require')
+    # conn = psycopg2.connect(data_base_url, sslmode='require')
     # conn = psycopg2.connect(data_base_url)
+    conn = psycopg2.connect("dbname=postgres user=postgres password=maxlima13")
 
     cursor = conn.cursor()
 

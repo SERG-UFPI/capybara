@@ -4,8 +4,9 @@ from id_linking_algorithms.normalizer import normalizer
 def start_simple_algorithm(users, vector=[]):
     I = []
     for user in users:
-        normalized_user = normalizer(user["email"])
-        I.append(normalized_user)
+        temp = user
+        temp["normalized"] = normalizer(user["email"])
+        I.append(temp)
     return simple_algorithm(I, vector)
 
 
@@ -60,7 +61,12 @@ def simple_algorithm(I, vector):
 
 
 def shouldInclude(iMerge, i, p):
-    if (i in iMerge) and (len(i) > p):
+    check = False
+    for x in iMerge:
+        if i["normalized"] in x.values():
+            check = True
+            break
+    if check and (len(i["normalized"]) > p):
         return True
 
     return False
