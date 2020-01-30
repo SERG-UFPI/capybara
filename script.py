@@ -284,6 +284,6 @@ def run(owner, repository):
 
 
 if __name__ == "__main__":
-    # run("Mex978", "compilador")
-    run("Mex978", "sql_injection")
+    run("Mex978", "compilador")
+    # run("Mex978", "sql_injection")
     # run("ES2-UFPI", "Unichat")

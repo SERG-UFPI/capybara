@@ -365,7 +365,7 @@ def jsonToSql(connection, tables, repository):
             maps_existent = _getExistMaps(connection)
             users_existent = _getExistUsers(connection)
             map_identification = start_simple_algorithm(
-                users, maps_existent=maps_existent, users_existent=users_existent)
+                users, maps_existent=maps_existent)
             print(f"MAP IDENTIFICATION ==> {map_identification}")
             _insertMapIdentification(
                 map_identification, "simple algorithm", connection)
