@@ -23,7 +23,7 @@ def insertCommitsCommand(keys, values, json_file):
     for i in range(len(keys)):
         # t = type(json_file[keys[i]])
         if i == len(keys) - 1:
-            sql += "%s);"
+            sql += "%s) ON CONFLICT DO NOTHING;"
         else:
             sql += "%s, "
 
@@ -43,7 +43,7 @@ def insertIssuesCommand(keys, values, json_file):
     sql += ") VALUES (\n"
     for i in range(len(keys)):
         if i == len(keys) - 1:
-            sql += "%s);"
+            sql += "%s) ON CONFLICT DO NOTHING;"
         else:
             sql += "%s, "
 
@@ -63,7 +63,7 @@ def insertPRsCommand(keys, values, json_file):
     sql += ") VALUES (\n"
     for i in range(len(keys)):
         if i == len(keys) - 1:
-            sql += "%s);"
+            sql += "%s) ON CONFLICT DO NOTHING;"
         else:
             sql += "%s, "
 
@@ -83,7 +83,7 @@ def insertRepositorysCommand(keys, values, json_file):
     sql += ") VALUES (\n"
     for i in range(len(keys)):
         if i == len(keys) - 1:
-            sql += "%s);"
+            sql += "%s) ON CONFLICT DO NOTHING;"
         else:
             sql += "%s, "
 
@@ -114,7 +114,7 @@ def insertRepositorysRelationshipCommand(cursor, values, table_referenced):
         atributte = "commit"
     sql = f"""
     INSERT INTO {relationship_table} (owner, repository, {atributte})
-    VALUES (%s, %s, %s);"""
+    VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;"""
 
     cursor.execute(sql, values)
 
@@ -151,7 +151,6 @@ def _insert(new_values, keys, values, attributes, cursor, connection,
     table = 'repositorys' if category == 'repository' else category
     if table == "commits":
         sql = insertCommitsCommand(keys, values, attributes)
-        start_simple_algorithm()
     elif table == "issues":
         sql = insertIssuesCommand(keys, values, attributes)
     elif table == "pullrequests":
@@ -167,7 +166,7 @@ def _createIdentificationTables(connection):
     cursor = connection.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS identification (
-            id SERIAL UNIQUE,
+            id BIGSERIAL UNIQUE,
             name VARCHAR NOT NULL,
             email VARCHAR NOT NULL,
             PRIMARY KEY (name, email)
@@ -177,9 +176,10 @@ def _createIdentificationTables(connection):
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS map_identification (
-            id SERIAL PRIMARY KEY,
+            id BIGSERIAL,
             id_identification INTEGER REFERENCES identification(id),
-            algorithm VARCHAR NOT NULL
+            algorithm VARCHAR NOT NULL,
+            PRIMARY KEY (id, id_identification)
         );
     """)
     connection.commit()
@@ -187,51 +187,87 @@ def _createIdentificationTables(connection):
 
 def _insertUser(user, connection):
     cursor = connection.cursor()
+    id_row = None
     sql = """
     INSERT INTO
         identification (name, email)
     VALUES
         (%s, %s)
+    ON CONFLICT DO NOTHING
     RETURNING id;
     """
     cursor.execute(sql, (user["name"], user["email"]))
+    returned_value = cursor.fetchone()
+    if returned_value:
+        id_row = returned_value[0]
     connection.commit()
-    id_row = cursor.fetchone()[0]
     return id_row
+
 
 def _getExistUsers(connection):
     sql = """
         SELECT
-            json_build_object(map_identification.id_identification, json_agg((identification.name, identification.email)))
+            *
+        FROM
+            identification
+        ;
+    """
+    result = []
+    cursor = connection.cursor()
+    cursor.execute(sql)
+    elements = cursor.fetchall()
+    for element in elements:
+        if len(element) > 0:
+            result.append(element)
+    return result
+
+
+def _getExistMaps(connection):
+    sql = """
+        SELECT
+            json_build_object(map_identification.id, json_agg((identification.id, identification.name, identification.email)))
         FROM
             map_identification, identification
         WHERE
             map_identification.id_identification = identification.id
         GROUP BY
-            map_identification.id_identification
+            map_identification.id
         ;
     """
     result = []
-    query = connection.cursor().execute(sql)
-    elements = query.fetchall()
-    for i in elements:
-        tem = []
-        for j in i.values():
-            for w in j:
-                temp.append({"id": int(list(i.keys())[0]), "name": w["f1"], "email": w["f2"], "normalized": normalizer(w["f2"])})
+    cursor = connection.cursor()
+    cursor.execute(sql)
+    elements = cursor.fetchall()
+    for element in elements:
+        e = element[0]
+        key = int(list(e.keys())[0])
+        temp = {key: []}
+        for i in e.values():
+            for j in i:
+                temp[key].append(
+                    {"id": j["f1"], "name": j["f2"], "email": j["f3"]})
         if len(temp) > 0:
             result.append(temp)
+
     return result
 
-def _insertMapIdentification(id, map_identification, algorithm):
+
+def _insertMapIdentification(map_identification, algorithm, connection):
+    cursor = connection.cursor()
+    # print(map_identification)
     for i in map_identification:
-        sql = f"""
-        INSERT INTO
-            map_identification (id, id_identification, algorithm)
-        VALUES
-            ({id}, {map_identification["id"]}, {algorithm})
-        ;
-    """
+        # print(i)
+        for value in list(i.values())[0]:
+            id_value = int(list(i.keys())[0])
+            sql = """
+                INSERT INTO
+                    map_identification (id, id_identification, algorithm)
+                VALUES
+                    (%s, %s, %s)
+                ON CONFLICT DO NOTHING;
+            """
+            cursor.execute(sql, (id_value, value["id"], algorithm))
+            connection.commit()
 
 
 def jsonToSql(connection, tables, repository):
@@ -250,8 +286,6 @@ def jsonToSql(connection, tables, repository):
                     attributes[key] = value
 
         keys = [key for key in attributes]
-
-        print(keys)
 
         try:
             _createTable(tables, keys, attributes, category, connection,
@@ -283,17 +317,18 @@ def jsonToSql(connection, tables, repository):
         for item in repository[category]:
             attributes = item['data']
             if category == "commits":
-                user = attributes["commiter"]
+                # print(attributes)
+                user = attributes["Commit"]
                 i = user.find("<")
                 name = user[0:i].strip()
                 email = user[(i + 1):(len(user) - 1)]
                 user = {"name": name, "email": email}
-                try:
-                    id_user = _insertUser(user, connection)
+                id_user = _insertUser(user, connection)
+                # print(f"ID_USER ==> {id_user}")
+                if id_user:
                     user["id"] = id_user
+                    # print(user)
                     users.append(user)
-                except Exception:
-                    pass
             keys = []
             for key in attributes:
                 if attributes[key] is not None:
@@ -326,6 +361,9 @@ def jsonToSql(connection, tables, repository):
                 print(f"INSERTED DATA IN DB {category}")
             except Exception as e:
                 print(f" # Erro na inserção de dados: {e}")
-        values = _getExistUsers(connection)
-        map_identification = start_simple_algorithm(users, values=values)
-        _insertMapIdentification(map_identification)
+        maps_existent = _getExistMaps(connection)
+        users_existent = _getExistUsers(connection)
+        map_identification = start_simple_algorithm(
+            users, maps_existent=maps_existent, users_existent=users_existent)
+        _insertMapIdentification(
+            map_identification, "simple algorithm", connection)

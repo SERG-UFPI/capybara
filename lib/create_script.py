@@ -1,7 +1,7 @@
 def createTableScript(keys, cursor, json_file, table):
     sql = """"""
     sql += f"CREATE TABLE IF NOT EXISTS {table} (\n"
-    sql += " key SERIAL"
+    sql += " key BIGSERIAL"
     for key in keys:
         t = type(json_file[key])
         atribute_name = key.lower().replace("-", "_")
@@ -38,7 +38,7 @@ def createTableScript(keys, cursor, json_file, table):
 def createRelationshipCommitsRepositorysScript(cursor, repository_keys):
     sql = """
     CREATE TABLE IF NOT EXISTS repository_commits (
-        key SERIAL,
+        key BIGSERIAL,
         commit TEXT"""
 
     for key in repository_keys:
@@ -65,7 +65,7 @@ def createRelationshipCommitsRepositorysScript(cursor, repository_keys):
 def createRelationshipIssuesRepositorysScript(cursor, repository_keys):
     sql = """
     CREATE TABLE IF NOT EXISTS repository_issues (
-        key SERIAL,
+        key BIGSERIAL,
         id_issue INTEGER"""
 
     for key in repository_keys:
@@ -92,7 +92,7 @@ def createRelationshipIssuesRepositorysScript(cursor, repository_keys):
 def createRelationshipPullRequestsRepositorysScript(cursor, repository_keys):
     sql = """
     CREATE TABLE IF NOT EXISTS repository_pullrequests (
-        key SERIAL,
+        key BIGSERIAL,
         id_pull_request INTEGER"""
 
     for key in repository_keys:

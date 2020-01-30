@@ -259,7 +259,6 @@ def run(owner, repository):
         repository_info = list(generateRepository(owner, repository))
         print("RETRIEVING COMMITS...")
         commits = list(getCommits(owner, repository))
-        print(commits)
         print("COMMITS RETRIEVED")
 
         print("RETRIEVING ISSUES...")
@@ -282,3 +281,13 @@ def run(owner, repository):
         tables = getColumnsTable(cursor)
         jsonToSql(conn, tables, repository)
     conn.close()
+
+
+if __name__ == "__main__":
+    # try:
+    #     run("Mex978", "compilador")
+    #     # run("ES2-UFPI", "Unichat")
+    # except Exception as e:
+    #     print(f"Erro: {e}")
+    # run("Mex978", "compilador")
+    run("ES2-UFPI", "Unichat")
