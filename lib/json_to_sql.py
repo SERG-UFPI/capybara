@@ -245,7 +245,7 @@ def _getExistMaps(connection):
         for i in e.values():
             for j in i:
                 temp[key].append(
-                    {"id": j["f1"], "name": j["f2"], "email": j["f3"]})
+                    {"id": j["f1"], "name": j["f2"], "email": j["f3"], "normalized": normalizer(j["f3"])})
         if len(temp) > 0:
             result.append(temp)
 
@@ -361,9 +361,11 @@ def jsonToSql(connection, tables, repository):
                 print(f"INSERTED DATA IN DB {category}")
             except Exception as e:
                 print(f" # Erro na inserção de dados: {e}")
-        maps_existent = _getExistMaps(connection)
-        users_existent = _getExistUsers(connection)
-        map_identification = start_simple_algorithm(
-            users, maps_existent=maps_existent, users_existent=users_existent)
-        _insertMapIdentification(
-            map_identification, "simple algorithm", connection)
+        if category == "commits":
+            maps_existent = _getExistMaps(connection)
+            users_existent = _getExistUsers(connection)
+            map_identification = start_simple_algorithm(
+                users, maps_existent=maps_existent, users_existent=users_existent)
+            print(f"MAP IDENTIFICATION ==> {map_identification}")
+            _insertMapIdentification(
+                map_identification, "simple algorithm", connection)

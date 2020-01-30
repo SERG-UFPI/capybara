@@ -231,7 +231,7 @@ def run(owner, repository):
     data_base_url = os.environ.get("DATABASE_URL")
     # conn = psycopg2.connect(data_base_url, sslmode='require')
     # conn = psycopg2.connect(data_base_url)
-    conn = psycopg2.connect("dbname=postgres user=postgres password=maxlima13")
+    conn = psycopg2.connect("dbname=serg user=postgres password=maxlima13")
 
     cursor = conn.cursor()
 
@@ -284,10 +284,6 @@ def run(owner, repository):
 
 
 if __name__ == "__main__":
-    # try:
-    #     run("Mex978", "compilador")
-    #     # run("ES2-UFPI", "Unichat")
-    # except Exception as e:
-    #     print(f"Erro: {e}")
     # run("Mex978", "compilador")
-    run("ES2-UFPI", "Unichat")
+    run("Mex978", "sql_injection")
+    # run("ES2-UFPI", "Unichat")
