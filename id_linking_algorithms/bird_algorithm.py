@@ -1,50 +1,49 @@
 from id_linking_algorithms.normalizer import normalizer
+from id_linking_algorithms.base_algorithm import base_algorithm
 
 
-def start_bird_algorithm(users, vector=[]):
+def levenshtein(s1, s2):
+    if len(s1) < len(s2):
+        return levenshtein(s2, s1)
+
+    # len(s1) >= len(s2)
+    if len(s2) == 0:
+        return len(s1)
+
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            # j+1 instead of j since previous_row and current_row are one character longer
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1       # than s2
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+
+    return previous_row[-1]
+
+
+def start_bird_algorithm(users, maps_existent=[]):
     I = []
     for user in users:
-        normalized_user = normalizer(user["email"])
-        I.append(normalized_user)
-    return bird_algorithm(I, vector)
+        temp = user
+        temp["normalized"] = normalizer(user["email"])
+        I.append(temp)
+    return bird_algorithm(I, maps_existent)
 
 
-def bird_algorithm(I, vector):
-    identityMerges = []
-    p = 3  # similarity threshold
-    if len(vector) == 0:
-        while len(I) > 0:
-            r = I[0]  # First element from I
-            iMerge = []
-            iMerge.append(r)
-            I.remove(r)
-            for i in I:
-                if shouldInclude(iMerge, i, p):
-                    iMerge.append(i)
-                    I.remove(i)
-            identityMerges.append(iMerge)
-    else:
-        identityMergesTemp = vector
-        while len(I) > 0:
-            for i in I:
-                for iMergeTemp in identityMergesTemp:
-                    iMerge = iMergeTemp.copy()
-                    if shouldInclude(iMerge, i, p):
-                        iMerge.append(i)
-                        I.remove(i)
-                        break
-                identityMerges.append(iMerge)
-    return identityMerges
+def bird_algorithm(I, maps_existent):
+    return base_algorithm(I=I, maps_existent=maps_existent, shouldInclude=shouldInclude, p=0.3)
 
 
 def shouldInclude(iMerge, i, p):
-    if not a:
-        return len(b)
-    if not b:
-        return len(a)
-    result = min(lev(a[1:], b[1:])+(a[0] != b[0]),
-                 lev(a[1:], b)+1, lev(a, b[1:])+1)
-    if result >= p:
-        return True
+    check = False
+    for x in list(iMerge.values())[0]:
+        size_1 = len(i["normalized"])
+        size_2 = len(x["normalized"])
+        if 1 - (levenshtein(i["normalized"], x["normalized"]))/(max([size_1, size_2])) >= p:
+            check = True
+            break
 
-    return False
+    return check

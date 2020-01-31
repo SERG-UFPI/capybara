@@ -4,6 +4,7 @@ import psycopg2
 from lib.create_script import createTableScript, createRelationshipCommitsRepositorysScript, createRelationshipIssuesRepositorysScript, createRelationshipPullRequestsRepositorysScript
 from lib.alter_script import alterTableScript
 from id_linking_algorithms.simple_algorithm import start_simple_algorithm
+from id_linking_algorithms.bird_algorithm import start_bird_algorithm
 from id_linking_algorithms.normalizer import normalizer
 
 
@@ -222,14 +223,14 @@ def _getExistUsers(connection):
     return result
 
 
-def _getExistMaps(connection):
-    sql = """
+def _getExistMaps(connection, algorithm):
+    sql = f"""
         SELECT
             json_build_object(map_identification.id, json_agg((identification.id, identification.name, identification.email)))
         FROM
             map_identification, identification
         WHERE
-            map_identification.id_identification = identification.id
+            map_identification.id_identification = identification.id AND map_identification.algorithm = '{algorithm}'
         GROUP BY
             map_identification.id
         ;
@@ -362,9 +363,14 @@ def jsonToSql(connection, tables, repository):
             except Exception as e:
                 print(f" # Erro na inserção de dados: {e}")
         if category == "commits":
-            maps_existent = _getExistMaps(connection)
-            users_existent = _getExistUsers(connection)
-            map_identification = start_simple_algorithm(
+            maps_existent = _getExistMaps(connection, "Simple")
+            map_identification_simple = start_simple_algorithm(
                 users, maps_existent=maps_existent)
             _insertMapIdentification(
-                map_identification, "simple algorithm", connection)
+                map_identification_simple, "Simple", connection)
+
+            maps_existent = _getExistMaps(connection, "Bird")
+            map_identification_simple = start_bird_algorithm(
+                users, maps_existent=maps_existent)
+            _insertMapIdentification(
+                map_identification_simple, "Bird", connection)
