@@ -1,0 +1,3 @@
+[submodule "utils/cloc"]
+	path = utils/cloc
+	url = git@github.com:AlDanial/cloc.git

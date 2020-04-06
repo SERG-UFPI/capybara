@@ -8,6 +8,7 @@ import os
 from lib.json_to_sql import jsonToSql
 from perceval.backends.core.github import GitHub
 from perceval.backends.core.git import Git
+from lib.get_metrics import get_all_metrics, get_community_metric
 
 
 def getCommits(user_owner, repo_name):
@@ -135,8 +136,8 @@ def returnIssues(owner, repository, limit):
 
 def returnCommits(owner, repository, limit):
     data_base_url = os.environ.get("DATABASE_URL")
-    conn = psycopg2.connect(data_base_url, sslmode='require')
-    # conn = psycopg2.connect(data_base_url)
+    # conn = psycopg2.connect(data_base_url, sslmode='require')
+    conn = psycopg2.connect(data_base_url)
     cursor = conn.cursor()
 
     tables = getColumnsTable(cursor)
@@ -227,9 +228,10 @@ def returnPullRequests(owner, repository, limit):
     return result
 
 
-def run(owner, repository):
+def run(owner, repository_name):
     data_base_url = os.environ.get("DATABASE_URL")
-    conn = psycopg2.connect(data_base_url, sslmode='require')
+    print(data_base_url)
+    conn = psycopg2.connect(data_base_url)
     # conn = psycopg2.connect(data_base_url)
 
     cursor = conn.cursor()
@@ -246,7 +248,7 @@ def run(owner, repository):
         else:
             break
 
-    repositorys = checkRepoExists(owner, repository, cursor)
+    repositorys = checkRepoExists(owner, repository_name, cursor)
 
     if repositorys is None:
         print("GETING DATA...")
@@ -255,19 +257,18 @@ def run(owner, repository):
         issues = {}
         pullrequests = {}
 
-        repository_info = list(generateRepository(owner, repository))
+        repository_info = list(generateRepository(owner, repository_name))
         print("RETRIEVING COMMITS...")
-        commits = list(getCommits(owner, repository))
-        print(commits)
+        commits = list(getCommits(owner, repository_name))
         print("COMMITS RETRIEVED")
 
-        print("RETRIEVING ISSUES...")
-        issues = list(getIssues(owner, repository, tokens))
-        print("ISSUES RETRIEVED")
+        # print("RETRIEVING ISSUES...")
+        # issues = list(getIssues(owner, repository_name, tokens))
+        # print("ISSUES RETRIEVED")
 
-        print("RETRIEVING PULL_REQUESTS...")
-        pullrequests = list(getPRs(owner, repository, tokens))
-        print("PULL_REQUESTS RETRIEVED")
+        # print("RETRIEVING PULL_REQUESTS...")
+        # pullrequests = list(getPRs(owner, repository, tokens))
+        # print("PULL_REQUESTS RETRIEVED")
 
         repository = {
             "repository": repository_info,
@@ -276,8 +277,24 @@ def run(owner, repository):
             "pullrequests": pullrequests
         }
 
+        # print(repository_info)
+
+        # file = open("issues.py", "w")
+        # file.write(str(issues[0:10]))
+        # file.close()
+
+        # community_metric = get_community_metric(commits)
         print("DATA FETCHED!")
 
-        tables = getColumnsTable(cursor)
-        jsonToSql(conn, tables, repository)
+        # print(get_all_metrics(owner, repository_name, issues, commits))
+        get_community_metric(commits=commits)
+
+        # tables = getColumnsTable(cursor)
+        # jsonToSql(conn, tables, repository)
+
     conn.close()
+
+
+if __name__ == "__main__":
+    # run("Mex978", "compilador")
+    run("ES2-UFPI", "Unichat")
