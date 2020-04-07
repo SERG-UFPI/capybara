@@ -263,9 +263,9 @@ def run(owner, repository_name):
         commits = list(getCommits(owner, repository_name))
         print("COMMITS RETRIEVED")
 
-        # print("RETRIEVING ISSUES...")
-        # issues = list(getIssues(owner, repository_name, tokens))
-        # print("ISSUES RETRIEVED")
+        print("RETRIEVING ISSUES...")
+        issues = list(getIssues(owner, repository_name, tokens))
+        print("ISSUES RETRIEVED")
 
         # print("RETRIEVING PULL_REQUESTS...")
         # pullrequests = list(getPRs(owner, repository, tokens))
@@ -287,8 +287,9 @@ def run(owner, repository_name):
         # community_metric = get_community_metric(commits)
         print("DATA FETCHED!")
 
-        # print(get_all_metrics(owner, repository_name, issues, commits))
-        get_community_metric(commits=commits)
+        print(get_all_metrics(owner, repository_name, issues, commits))
+        # a = get_community_metric(commits=commits)
+        # print(a)
 
         # tables = getColumnsTable(cursor)
         # jsonToSql(conn, tables, repository)

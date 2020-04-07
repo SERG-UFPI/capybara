@@ -5,8 +5,10 @@ import tempfile
 import base64
 import subprocess
 import json
+from id_linking_algorithms.simple_algorithm import start_simple_algorithm
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+
 
 def get_token():
     tokens = []
@@ -29,6 +31,7 @@ def get_token():
 
     return token_with_greatest_rate_limiting
 
+
 def get_sha_for_tag(repository, tag):
     """
     Returns a commit PyGithub object for the specified repository and tag.
@@ -44,12 +47,14 @@ def get_sha_for_tag(repository, tag):
     #     raise ValueError('No Tag or Branch exists with that name')
     # return matched_tags[0].commit.sha
 
+
 def download_directory(repository, sha, atual_path, server_path="."):
     """
     Download all contents at server_path with commit tag sha in
     the repository.
     """
     contents = repository.get_contents(server_path, ref=sha)
+    # contents = repository.get_git_blob(sha=sha)
 
     for content in contents:
         print("Processing %s" % content.path)
@@ -58,19 +63,28 @@ def download_directory(repository, sha, atual_path, server_path="."):
         else:
             try:
                 path = content.path
+                if not os.path.exists(
+                        os.path.dirname(atual_path + "/" + path)):
+                    try:
+                        os.makedirs(os.path.dirname(atual_path + "/" + path))
+                    except Exception as e:  # Guard against race condition
+                        pass
+
                 file_content = repository.get_contents(path, ref=sha)
                 file_data = base64.b64decode(file_content.content)
-                file_out = open(atual_path + "//" + content.name, "w")
+                file_out = open(atual_path + "/" + path, "w")
                 file_out.write(file_data.decode("ISO-8859-1"))
                 file_out.close()
             except (Exception, IOError) as exc:
                 print('Error processing %s: %s', content.path, exc)
 
-def downloadRepo(owner, repository, atual_path, token):    
-    g = Github(token)
+
+def downloadRepo(owner, repository, atual_path, token):
+    g = Github(token, timeout=30)
     repo = g.get_repo(f"{owner}/{repository}")
     sha = get_sha_for_tag(repo, "master")
     download_directory(repo, sha, atual_path)
+
 
 def get_documentation_metric(path):
     cloc_path = f"{path}/../../utils/cloc/cloc"
@@ -85,24 +99,76 @@ def get_documentation_metric(path):
     content = ["blank", "comment", "code"]
     temp = str(stdout)[index:].replace("\n", "").replace("\'", "").replace(
         "\"", "").split(",")[1:]
-    print(temp)
     result = dict(zip(content, temp))
     comment_lines = float(result["comment"] if "comment" in result else 0)
     blank_lines = float(result["blank"] if "blank" in result else 0)
-    return (comment_lines / (comment_lines + blank_lines)) if (comment_lines + blank_lines) != 0 else 0
+    return (comment_lines /
+            (comment_lines + blank_lines)) if (comment_lines +
+                                               blank_lines) != 0 else 0
+
+
+def get_tests_metric(path):
+    cloc_path = f"{path}/../../utils/cloc/cloc"
+    content = ["blank", "comment", "code"]
+    parse = lambda string, index: (str(string)[index:].replace(
+        "\n", "").replace("\'", "").replace("\"", "").split(",")[1:])
+    get_code = lambda x: float(x["code"] if "code" in x else 0)
+
+    process = subprocess.Popen(["perl", cloc_path, path, "--csv"],
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT)
+
+    stdout, _ = process.communicate()
+    stdout = stdout.decode()
+    index = stdout.find("SUM")
+    temp = parse(stdout, index)
+    code_source = get_code(dict(zip(content, temp)))
+
+    process = subprocess.Popen([
+        "perl", cloc_path, path, "--match-d=test|spec|tests", "--fullpath",
+        "--csv"
+    ],
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT)
+
+    stdout, _ = process.communicate()
+    stdout = stdout.decode()
+    index = stdout.find("SUM")
+    temp = parse(stdout, index)
+    code_test = get_code(dict(zip(content, temp)))
+
+    return (code_test / code_source) if (code_source) != 0 else 0
+
 
 def get_community_metric(commits):
+    limiar_commits = int(0.8 * len(commits))
     commiters_commits = {}
 
     for commit in commits:
         author = commit["data"]["Author"].replace(">", "").split(" <")
-        print(author)
-        user = {"name": author[0], "email": author[1]}
+        user = author[1]
         commiters_commits[user] = commiters_commits.get(user, []) + [commit]
-    
-    print(commiters_commits.keys())
-        
-    return commiters_commits
+
+    commiters_commits = {
+        k: v
+        for k, v in sorted(commiters_commits.items(),
+                           key=lambda item: len(item[1]),
+                           reverse=True)
+    }
+
+    commiters_len_commits = []
+    for key in commiters_commits.keys():
+        commiters_len_commits.append(len(commiters_commits[key]))
+    aux = 0
+    n = 0
+    for c in commiters_len_commits:
+        aux += c
+        n += 1
+        if limiar_commits - aux <= 0:
+            break
+
+    return n
+
 
 def get_metric_history(data):
     if len(data) == 0:
@@ -123,6 +189,7 @@ def get_metric_history(data):
 
     return (num_data / num_months) if num_months > 0 else num_data
 
+
 def get_metric_continuous_integration(owner="", repository="", token=None):
     list_ci_files = ["Jenkinsfile", ".travis.yml", ".circleci"]
     if token is None:
@@ -137,6 +204,7 @@ def get_metric_continuous_integration(owner="", repository="", token=None):
             return 1
     return 0
 
+
 def get_metric_license(owner="", repository="", token=None):
     if token is None:
         return Exception("Espera-se um token de acesso!")
@@ -148,6 +216,7 @@ def get_metric_license(owner="", repository="", token=None):
     if "LICENSE" in files:
         return 1
     return 0
+
 
 def get_all_metrics(owner, repository, issues, commits):
     print(f"Owner: {owner}")
@@ -165,6 +234,7 @@ def get_all_metrics(owner, repository, issues, commits):
             print(f"Erro download: {e}")
 
     documentation_metric = get_documentation_metric(atual_path.name)
+    tests_metric = get_tests_metric(atual_path.name)
     ci_metric = get_metric_continuous_integration(owner=owner,
                                                   repository=repository,
                                                   token=token)
@@ -173,6 +243,7 @@ def get_all_metrics(owner, repository, issues, commits):
                                         token=token)
     history_commits_metric = get_metric_history(data=commits)
     history_issues_metric = get_metric_history(data=issues)
+    community = get_community_metric(commits)
 
     atual_path.cleanup()
 
@@ -182,37 +253,24 @@ def get_all_metrics(owner, repository, issues, commits):
         "history": history_commits_metric,
         "management": history_issues_metric,
         "documentation": documentation_metric,
-        "tests": None,
-        "community": None
+        "community": community,
+        "tests": tests_metric
     }
 
 
-def main():
-    a = get_community_metric(commits_list)
 # def main():
-#     # token = get_token()
-#     # owner = "ES2-UFPI"
-#     # repository = "Unichat"
+#     owner = "ES2-UFPI"
+#     repository = "Unichat"
+#     # print(get_documentation_metric("./Unichat"))
+#     # print(get_tests_metric("./Unichat"))
+#     token = get_token()
+#     atual_path = tempfile.TemporaryDirectory(dir=BASE_PATH)
+#     exception = Exception()
+#     while exception != None:
+#         try:
+#             downloadRepo(owner, repository, atual_path.name, token)
+#             exception = None
+#         except Exception as e:
+#             print(f"Erro download: {e}")
 
-#     # ci_metric = get_metric_continuous_integration(owner=owner,
-#     #                                               repository=repository,
-#     #                                               token=token)
-#     # license_metric = get_metric_license(owner=owner,
-#     #                                     repository=repository,
-#     #                                     token=token)
-#     # history_commits_metric = get_metric_history(data=commits_list)
-#     # history_issues_metric = get_metric_history(data=issues_list)
-
-#     # print(f"CI Metric -> {ci_metric}")
-#     # print(f"License Metric -> {license_metric}")
-#     # print(f"History Commits Metric -> {history_commits_metric}")
-#     # print(f"History Issues Metric -> {history_issues_metric}")
-
-#     # downloadRepo("ES2-UFPI", "Unichat")
-#     # documentation_metric = get_documentation_metric()
-#     # print(f"Documentation Metric -> {documentation_metric}")
-
-#     print(get_all_metrics("Mex978", "compilador"))
-
-
-main()
+# main()
