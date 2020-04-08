@@ -6,8 +6,22 @@ import base64
 import subprocess
 import json
 from id_linking_algorithms.simple_algorithm import start_simple_algorithm
+from utils.test_file_detector.testFileDetector import TestDetector
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+
+
+def getListOfFiles(dirName):
+    listOfFile = os.listdir(dirName)
+    allFiles = list()
+    for entry in listOfFile:
+        fullPath = os.path.join(dirName, entry)
+        if os.path.isdir(fullPath):
+            allFiles = allFiles + getListOfFiles(fullPath)
+        else:
+            allFiles.append(fullPath)
+
+    return allFiles
 
 
 def get_token():
@@ -24,10 +38,13 @@ def get_token():
     greatest_rate_limiting = -1
     for token in tokens:
         g_temp = Github(token)
-        rate_limiting = g_temp.rate_limiting[0]
-        if rate_limiting != None and rate_limiting > greatest_rate_limiting:
-            greatest_rate_limiting = rate_limiting
-            token_with_greatest_rate_limiting = token
+        try:
+            rate_limiting = g_temp.rate_limiting[0]
+            if rate_limiting != None and rate_limiting > greatest_rate_limiting:
+                greatest_rate_limiting = rate_limiting
+                token_with_greatest_rate_limiting = token
+        except Exception as identifier:
+            continue
 
     return token_with_greatest_rate_limiting
 
@@ -57,7 +74,7 @@ def download_directory(repository, sha, atual_path, server_path="."):
     # contents = repository.get_git_blob(sha=sha)
 
     for content in contents:
-        print("Processing %s" % content.path)
+        # print("Processing %s" % content.path)
         if content.type == 'dir':
             download_directory(repository, sha, atual_path, content.path)
         else:
@@ -76,10 +93,14 @@ def download_directory(repository, sha, atual_path, server_path="."):
                 file_out.write(file_data.decode("ISO-8859-1"))
                 file_out.close()
             except (Exception, IOError) as exc:
-                print('Error processing %s: %s', content.path, exc)
+                pass
+                # print('Error processing %s: %s', content.path, exc)
 
 
-def downloadRepo(owner, repository, atual_path, token):
+def downloadRepo(owner, repository, atual_path):
+    token = get_token()
+    if token is None:
+        return Exception("Espera-se um token de acesso!")
     g = Github(token, timeout=30)
     repo = g.get_repo(f"{owner}/{repository}")
     sha = get_sha_for_tag(repo, "master")
@@ -123,19 +144,25 @@ def get_tests_metric(path):
     index = stdout.find("SUM")
     temp = parse(stdout, index)
     code_source = get_code(dict(zip(content, temp)))
+    code_test = 0
 
-    process = subprocess.Popen([
-        "perl", cloc_path, path, "--match-d=test|spec|tests", "--fullpath",
-        "--csv"
-    ],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.STDOUT)
+    all_files = getListOfFiles(path)
+    _td = TestDetector()
+    test_files = filter(_td.test_search, all_files)
 
-    stdout, _ = process.communicate()
-    stdout = stdout.decode()
-    index = stdout.find("SUM")
-    temp = parse(stdout, index)
-    code_test = get_code(dict(zip(content, temp)))
+    for file in test_files:
+        process = subprocess.Popen([
+            "perl", cloc_path, path, "--match-d=test|spec|tests", "--fullpath",
+            "--csv"
+        ],
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+
+        stdout, _ = process.communicate()
+        stdout = stdout.decode()
+        index = stdout.find("SUM")
+        temp = parse(stdout, index)
+        code_test += get_code(dict(zip(content, temp)))
 
     return (code_test / code_source) if (code_source) != 0 else 0
 
@@ -190,8 +217,9 @@ def get_metric_history(data):
     return (num_data / num_months) if num_months > 0 else num_data
 
 
-def get_metric_continuous_integration(owner="", repository="", token=None):
+def get_metric_continuous_integration(owner="", repository=""):
     list_ci_files = ["Jenkinsfile", ".travis.yml", ".circleci"]
+    token = get_token()
     if token is None:
         return Exception("Espera-se um token de acesso!")
     g = Github(token)
@@ -205,7 +233,8 @@ def get_metric_continuous_integration(owner="", repository="", token=None):
     return 0
 
 
-def get_metric_license(owner="", repository="", token=None):
+def get_metric_license(owner="", repository=""):
+    token = get_token()
     if token is None:
         return Exception("Espera-se um token de acesso!")
     g = Github(token)
@@ -223,24 +252,17 @@ def get_all_metrics(owner, repository, issues, commits):
     print(f"Repository: {repository}")
     # print(f"Issues: {issues}")
     # print(f"Commits: {commits}")
-    token = get_token()
     atual_path = tempfile.TemporaryDirectory(dir=BASE_PATH)
-    exception = Exception()
-    while exception != None:
-        try:
-            downloadRepo(owner, repository, atual_path.name, token)
-            exception = None
-        except Exception as e:
-            print(f"Erro download: {e}")
+    try:
+        downloadRepo(owner, repository, atual_path.name)
+    except Exception as e:
+        pass
 
     documentation_metric = get_documentation_metric(atual_path.name)
     tests_metric = get_tests_metric(atual_path.name)
     ci_metric = get_metric_continuous_integration(owner=owner,
-                                                  repository=repository,
-                                                  token=token)
-    license_metric = get_metric_license(owner=owner,
-                                        repository=repository,
-                                        token=token)
+                                                  repository=repository)
+    license_metric = get_metric_license(owner=owner, repository=repository)
     history_commits_metric = get_metric_history(data=commits)
     history_issues_metric = get_metric_history(data=issues)
     community = get_community_metric(commits)
