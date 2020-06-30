@@ -54,6 +54,7 @@ cs,\[CollectionDefinition\(.*\)\]
 cs,\[Collection\(.*\)\]
 cs,assert.*
 js,test\(
+js,it\(
 js,describe\(
 rb,assert\(
 rb,assert_

@@ -42,7 +42,7 @@ def tech_lookup_generator(filename):
           
               token0,token1,token2,token3
     """
-    print("Creating Test Framework Dictionary...")
+    # print("Creating Test Framework Dictionary...")
     lookup = {}
     count = 1
     for line in csv.reader(open(filename)):

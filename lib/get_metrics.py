@@ -1,12 +1,13 @@
 from github import Github, RateLimitExceededException, GithubException
 import os
-from datetime import datetime
+import datetime
 import tempfile
 import base64
 import subprocess
 import json
 from id_linking_algorithms.simple_algorithm import start_simple_algorithm
 from utils.test_file_detector.testFileDetector import TestDetector
+from utils.get_token import get_token
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -22,31 +23,6 @@ def getListOfFiles(dirName):
             allFiles.append(fullPath)
 
     return allFiles
-
-
-def get_token():
-    tokens = []
-    index = 1
-    while 1:
-        token = os.environ.get(f"TOKEN_{index}")
-        if token != None:
-            tokens.append(token)
-            index += 1
-        else:
-            break
-    token_with_greatest_rate_limiting = None
-    greatest_rate_limiting = -1
-    for token in tokens:
-        g_temp = Github(token)
-        try:
-            rate_limiting = g_temp.rate_limiting[0]
-            if rate_limiting != None and rate_limiting > greatest_rate_limiting:
-                greatest_rate_limiting = rate_limiting
-                token_with_greatest_rate_limiting = token
-        except Exception as identifier:
-            continue
-
-    return token_with_greatest_rate_limiting
 
 
 def get_sha_for_tag(repository, tag):
@@ -151,10 +127,7 @@ def get_tests_metric(path):
     test_files = filter(_td.test_search, all_files)
 
     for file in test_files:
-        process = subprocess.Popen([
-            "perl", cloc_path, path, "--match-d=test|spec|tests", "--fullpath",
-            "--csv"
-        ],
+        process = subprocess.Popen(["perl", cloc_path, file, "--csv"],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT)
 
@@ -172,8 +145,8 @@ def get_community_metric(commits):
     commiters_commits = {}
 
     for commit in commits:
-        author = commit["data"]["Author"].replace(">", "").split(" <")
-        user = author[1]
+        author = commit["data"]["author"]
+        user = author['name']
         commiters_commits[user] = commiters_commits.get(user, []) + [commit]
 
     commiters_commits = {
@@ -197,15 +170,65 @@ def get_community_metric(commits):
     return n
 
 
+def retrieve_commits(owner, repository):
+    commits = []
+    token = get_token()
+    g = Github(token)
+    repo = g.get_repo(f'{owner}/{repository}')
+
+    commits_temp = repo.get_commits()
+
+    for commit in commits_temp:
+        item = {
+            'updated_on': commit.commit.author.date,
+            'data': {
+                'author': {
+                    'name': commit.commit.author.name,
+                    'email': commit.commit.author.email
+                },
+                'message': commit.commit.message
+            }
+        }
+        # print(item)
+        commits.append(item)
+    # print(commits)
+
+    return commits
+
+
+def retrieve_issues(owner, repository):
+    issues = []
+    token = get_token()
+    g = Github(token)
+    repo = g.get_repo(f'{owner}/{repository}')
+
+    issues_temp = repo.get_issues(state='all')
+
+    for issue in issues_temp:
+        item = {
+            'updated_on': issue.created_at,
+            'data': {
+                'author': {
+                    'name': issue.user.name,
+                    'email': issue.user.email,
+                }
+            }
+        }
+        # print(item)
+        issues.append(item)
+
+    return issues
+
+
 def get_metric_history(data):
     if len(data) == 0:
         return 0
-    initial_date = datetime.fromtimestamp(data[0]["updated_on"])
+    initial_date = data[0]["updated_on"]
     lowest_date = initial_date
-    biggest_date = datetime.fromtimestamp(data[0]["updated_on"])
+    biggest_date = data[0]["updated_on"]
     num_data = len(data)
     for commit in data:
-        date = datetime.fromtimestamp(commit["updated_on"])
+        date = commit["updated_on"]
         if date <= lowest_date:
             lowest_date = date
         elif date >= biggest_date:
@@ -247,16 +270,15 @@ def get_metric_license(owner="", repository=""):
     return 0
 
 
-def get_all_metrics(owner, repository, issues, commits):
-    print(f"Owner: {owner}")
-    print(f"Repository: {repository}")
-    # print(f"Issues: {issues}")
-    # print(f"Commits: {commits}")
+def get_all_metrics(owner, repository):
     atual_path = tempfile.TemporaryDirectory(dir=BASE_PATH)
     try:
         downloadRepo(owner, repository, atual_path.name)
     except Exception as e:
         pass
+
+    commits = retrieve_commits(owner, repository)
+    issues = retrieve_issues(owner, repository)
 
     documentation_metric = get_documentation_metric(atual_path.name)
     tests_metric = get_tests_metric(atual_path.name)
@@ -281,18 +303,21 @@ def get_all_metrics(owner, repository, issues, commits):
 
 
 # def main():
-#     owner = "ES2-UFPI"
-#     repository = "Unichat"
-#     # print(get_documentation_metric("./Unichat"))
-#     # print(get_tests_metric("./Unichat"))
-#     token = get_token()
-#     atual_path = tempfile.TemporaryDirectory(dir=BASE_PATH)
-#     exception = Exception()
-#     while exception != None:
-#         try:
-#             downloadRepo(owner, repository, atual_path.name, token)
-#             exception = None
-#         except Exception as e:
-#             print(f"Erro download: {e}")
+#     owner = "gatsbyjs"
+#     repository = "gatsby"
+#     # # print(get_documentation_metric("./Unichat"))
+#     # # print(get_tests_metric("./Unichat"))
+#     # token = get_token()
+#     # atual_path = tempfile.TemporaryDirectory(dir=BASE_PATH)
+#     # exception = Exception()
+#     # while exception != None:
+#     #     try:
+#     #         downloadRepo(owner, repository, atual_path.name, token)
+#     #         exception = None
+#     #     except Exception as e:
+#     #         print(f"Erro download: {e}")
+#     issues = retrieve_issues(owner, repository)
+#     print(issues)
+#     print(len(issues))
 
 # main()

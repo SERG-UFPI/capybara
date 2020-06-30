@@ -9,13 +9,20 @@ from lib.json_to_sql import jsonToSql
 from perceval.backends.core.github import GitHub
 from perceval.backends.core.git import Git
 from lib.get_metrics import get_all_metrics, get_community_metric
+from utils.get_token import get_token
+import lib.classifiers as cassifier
+from github import Github
+import tempfile
+
+BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 def getCommits(user_owner, repo_name):
-    repo = Git(f"https://github.com/{user_owner}/{repo_name}.git",
-               f"https://github.com/{user_owner}/{repo_name}.git")
-    commits = repo.fetch()
-    return commits
+    with tempfile.TemporaryDirectory(dir=BASE_PATH) as atual_path:
+        repo = Git(f"https://github.com/{user_owner}/{repo_name}.git",
+                   f"{atual_path}/{user_owner}_{repo_name}.git")
+        commits = repo.fetch()
+        return commits
 
 
 def getIssues(user_owner, repo_name, tokens):
@@ -82,14 +89,104 @@ def checkRepoExists(user_owner, repo_name, cursor):
         return cursor.fetchall()
     return None
 
+numFiles = 0
+
+def getNumFilesAux(repo, dir):
+    global numFiles
+    contents = repo.get_contents(dir)
+
+    for content in contents:
+        if content.type == 'dir':
+            getNumFilesAux(repo, content.path)
+        else:
+            numFiles += 1
+
+
+
+def getNumFiles(user_owner, repo_name):
+    global numFiles
+    token = get_token()
+    g = Github(token)
+    repo = g.get_repo(f'{user_owner}/{repo_name}')
+    numFiles = 0
+    getNumFilesAux(repo, dir=".")
+    return numFiles
 
 def generateRepository(user_owner, repo_name):
-    yield {'data': {'owner': user_owner, 'repository': repo_name}}
+    token = get_token()
+    g = Github(token)
+    repo = g.get_repo(f'{user_owner}/{repo_name}')
+    
+    COMMITS = repo.get_commits()
+
+    fullname = repo.full_name
+    clone_url = repo.clone_url
+    created_at = repo.created_at.timestamp()
+    default_branch = repo.default_branch
+    description = repo.description
+    fork = repo.fork
+    forks_count = repo.forks_count
+    homepage = repo.homepage
+    language = repo.language
+    name = repo.name
+    open_issues = repo.open_issues
+    pushed_at = repo.pushed_at.timestamp()
+    archived = repo.archived
+    stargazers_count = repo.stargazers_count
+    updated_at = repo.updated_at.timestamp()
+    watchers_count = repo.watchers_count
+    has_wiki = repo.has_wiki
+    # num_authors = repo.get_collaborators().totalCount
+    subscribers_count = repo.subscribers_count
+    commits_count = COMMITS.totalCount
+    last_commit = COMMITS[0]
+    size = repo.size
+    
+    # A linguagem com o maior número de linhas de código será a main_language
+    aux = repo.get_languages()
+    aux = {k: v for k, v in sorted(aux.items(), key=lambda item: item[1])}
+    main_language = list(aux.keys())[-1]
+
+    contents_aux = repo.get_contents(".")
+    contents_func = lambda x: repo.get_contents(x)
+
+    num_files = getNumFiles(user_owner, repo_name)
 
 
-def returnIssues(owner, repository, limit):
-    data_base_url = os.environ.get("DATABASE_URL")
-    conn = psycopg2.connect(data_base_url, sslmode='require')
+    yield {
+        'data': {
+            'owner': user_owner, 
+            'repository': repo_name,
+            # 'num_authors': num_authors,
+            'fullname': fullname,
+            'clone_url': clone_url,
+            'created_at': created_at,
+            'default_branch': default_branch,
+            'description': description,
+            'fork': fork,
+            'forks_count': forks_count,
+            'homepage': homepage,
+            'language': language,
+            'main_language': main_language,
+            'name': name,
+            'open_issues': open_issues,
+            'pushed_at': pushed_at,
+            'stargazers_count': stargazers_count,
+            'updated_at': updated_at,
+            'watchers_count': watchers_count,
+            'subscribers_count': subscribers_count,
+            'archived': archived,
+            'num_files': num_files,
+            'size': size
+        }
+    }
+
+
+def returnIssues(owner, repository, limit, pr_as_issue):
+    conn = psycopg2.connect(database="postgres",
+                            user="postgres",
+                            password="maxlima13",
+                            port=5432)
     # conn = psycopg2.connect(data_base_url)
     cursor = conn.cursor()
 
@@ -114,8 +211,8 @@ def returnIssues(owner, repository, limit):
     WHERE
         repository_issues.owner = %s AND
         repository_issues.repository = %s AND
-        repository_issues.id_issue = issues.id
-    LIMIT {"null" if limit is None else limit};
+        repository_issues.id_issue = issues.id {"" if pr_as_issue else "AND issues.pull_request IS NULL"}
+    LIMIT {"null" if limit == 0 else limit};
     """
     cursor.execute(sql, (owner, repository))
     lines = cursor.fetchall()
@@ -135,9 +232,11 @@ def returnIssues(owner, repository, limit):
 
 
 def returnCommits(owner, repository, limit):
-    data_base_url = os.environ.get("DATABASE_URL")
-    # conn = psycopg2.connect(data_base_url, sslmode='require')
-    conn = psycopg2.connect(data_base_url)
+    conn = psycopg2.connect(database="postgres",
+                            user="postgres",
+                            password="maxlima13",
+                            port=5432)
+
     cursor = conn.cursor()
 
     tables = getColumnsTable(cursor)
@@ -162,7 +261,7 @@ def returnCommits(owner, repository, limit):
         repository_commits.owner = %s AND
         repository_commits.repository = %s AND
         repository_commits.commit = commits.commit
-    LIMIT {"null" if limit is None else limit};
+    LIMIT {"null" if limit == 0 else limit};
     """
     cursor.execute(sql, (owner, repository))
     lines = cursor.fetchall()
@@ -182,9 +281,11 @@ def returnCommits(owner, repository, limit):
 
 
 def returnPullRequests(owner, repository, limit):
-    data_base_url = os.environ.get("DATABASE_URL")
-    conn = psycopg2.connect(data_base_url, sslmode='require')
-    # conn = psycopg2.connect(data_base_url)
+    conn = psycopg2.connect(database="postgres",
+                            user="postgres",
+                            password="maxlima13",
+                            port=5432)
+
     cursor = conn.cursor()
 
     tables = getColumnsTable(cursor)
@@ -209,7 +310,7 @@ def returnPullRequests(owner, repository, limit):
         repository_pullrequests.owner = %s AND
         repository_pullrequests.repository = %s AND
         repository_pullrequests.id_pull_request = pullrequests.id
-    LIMIT {"null" if limit is None else limit};
+    LIMIT {"null" if limit == 0 else limit};
     """
     cursor.execute(sql, (owner, repository))
     lines = cursor.fetchall()
@@ -227,13 +328,84 @@ def returnPullRequests(owner, repository, limit):
     conn.close()
     return result
 
+def returnRepositorys():
+    conn = psycopg2.connect(database="postgres",
+                            user="postgres",
+                            password="maxlima13",
+                            port=5432)
+
+    cursor = conn.cursor()
+
+    rows_to_fecth = "owner, repository"
+
+    sql = f"""
+    SELECT
+        {rows_to_fecth}
+    FROM
+        repositorys;
+    """
+    cursor.execute(sql)
+    lines = cursor.fetchall()
+
+    result = []
+
+    for line in lines:
+        temp = {}
+        temp["owner"] = line[0]
+        temp["repository"] = line[1]
+        result.append(temp)
+
+    cursor.close()
+    conn.close()
+    return result
+
+def returnRepository(owner, repository):
+    conn = psycopg2.connect(database="postgres",
+                            user="postgres",
+                            password="maxlima13",
+                            port=5432)
+
+    cursor = conn.cursor()
+
+    tables = getColumnsTable(cursor)
+
+    columns = [atrib["name"] for atrib in tables["repositorys"]]
+
+    rows_to_fecth = ""
+
+    for column in columns:
+        if column == columns[-1]:
+            rows_to_fecth += f"repositorys.{column}"
+        else:
+            rows_to_fecth += f"repositorys.{column}, "
+
+    sql = f"""
+    SELECT
+        {rows_to_fecth}
+    FROM
+        repositorys
+    WHERE
+        repositorys.owner = %s AND
+        repositorys.repository = %s;
+    """
+    cursor.execute(sql, (owner, repository))
+    lines = cursor.fetchall()
+
+    result = {}
+
+    for i in range(len(lines[0])):
+        result[columns[i]] = lines[0][i]
+
+    cursor.close()
+    conn.close()
+    return result
+
 
 def run(owner, repository_name):
-    data_base_url = os.environ.get("DATABASE_URL")
-    print(data_base_url)
-    conn = psycopg2.connect(data_base_url)
-    # conn = psycopg2.connect(data_base_url)
-    conn = psycopg2.connect("dbname=postgres user=postgres password=maxlima13")
+    conn = psycopg2.connect(database="postgres",
+                            user="postgres",
+                            password="maxlima13",
+                            port=5432)
 
     cursor = conn.cursor()
 
@@ -259,17 +431,28 @@ def run(owner, repository_name):
         pullrequests = {}
 
         repository_info = list(generateRepository(owner, repository_name))
+        print(repository_info)
         print("RETRIEVING COMMITS...")
         commits = list(getCommits(owner, repository_name))
         print("COMMITS RETRIEVED")
 
         print("RETRIEVING ISSUES...")
         issues = list(getIssues(owner, repository_name, tokens))
+        # issues = [item for item in temp if not ("pull_request" in item["data"].keys())]
         print("ISSUES RETRIEVED")
 
-        # print("RETRIEVING PULL_REQUESTS...")
-        # pullrequests = list(getPRs(owner, repository, tokens))
-        # print("PULL_REQUESTS RETRIEVED")
+        # return True
+
+        # metrics = get_all_metrics(owner, repository_name, issues, commits)
+
+        # if (not cassifier.run(metrics)):
+        #     raise Exception(
+        #         "O repositório não possui indícios suficientes de engenharia de software"
+        #     )
+
+        print("RETRIEVING PULL_REQUESTS...")
+        pullrequests = list(getPRs(owner, repository_name, tokens))
+        print("PULL_REQUESTS RETRIEVED")
 
         repository = {
             "repository": repository_info,
@@ -277,26 +460,15 @@ def run(owner, repository_name):
             "issues": issues,
             "pullrequests": pullrequests
         }
-
-        # print(repository_info)
-
-        # file = open("issues.py", "w")
-        # file.write(str(issues[0:10]))
-        # file.close()
-
-        # community_metric = get_community_metric(commits)
         print("DATA FETCHED!")
 
-        print(get_all_metrics(owner, repository_name, issues, commits))
-        # a = get_community_metric(commits=commits)
-        # print(a)
-
-        # tables = getColumnsTable(cursor)
-        # jsonToSql(conn, tables, repository)
+        tables = getColumnsTable(cursor)
+        jsonToSql(conn, tables, repository)
 
     conn.close()
 
 
 if __name__ == "__main__":
     # run("Mex978", "compilador")
-    run("ES2-UFPI", "Unichat")
+    # run("ES2-UFPI", "Unichat")
+    run("gatsbyjs", "gatsby")

@@ -25,12 +25,13 @@ def createTableScript(keys, cursor, json_file, table):
         else:
             sql += ",\n  PRIMARY KEY (id)"
     else:
-        sql += f",\n PRIMARY KEY ("
-        for key in keys:
-            if key == keys[-1]:
-                sql += f"{key})"
-            else:
-                sql += f"{key}, "
+        sql += ",\n  PRIMARY KEY (owner, repository)"
+        # sql += f",\n PRIMARY KEY ("
+        # for key in keys:
+        #     if key == keys[-1]:
+        #         sql += f"{key})"
+        #     else:
+        #         sql += f"{key}, "
     sql += "\n);"
     cursor.execute(sql)
 
@@ -41,10 +42,10 @@ def createRelationshipCommitsRepositorysScript(cursor, repository_keys):
         key BIGSERIAL,
         commit TEXT"""
 
-    for key in repository_keys:
-        sql += f",\n\t{key} TEXT"
-
-    sql += ","
+    # for key in repository_keys:
+    #     sql += f",\n\t{key} TEXT"
+    sql += ",\n\towner TEXT"
+    sql += ",\n\trepository TEXT,"
 
     sql += """
         FOREIGN KEY (commit) REFERENCES commits (commit)"""
@@ -52,10 +53,10 @@ def createRelationshipCommitsRepositorysScript(cursor, repository_keys):
     sql += f",\n\tFOREIGN KEY (owner, repository) REFERENCES repositorys (owner, repository)"
 
     sql += """,
-        PRIMARY KEY (commit"""
+        PRIMARY KEY (commit, owner, repository"""
 
-    for key in repository_keys:
-        sql += f", {key}"
+    # for key in repository_keys:
+    #     sql += f", {key}"
 
     sql += ")\n);"
 
@@ -68,10 +69,10 @@ def createRelationshipIssuesRepositorysScript(cursor, repository_keys):
         key BIGSERIAL,
         id_issue INTEGER"""
 
-    for key in repository_keys:
-        sql += f",\n\t{key} TEXT"
-
-    sql += ","
+    # for key in repository_keys:
+    #     sql += f",\n\t{key} TEXT"
+    sql += ",\n\towner TEXT"
+    sql += ",\n\trepository TEXT,"
 
     sql += """
         FOREIGN KEY (id_issue) REFERENCES issues (id)"""
@@ -79,10 +80,10 @@ def createRelationshipIssuesRepositorysScript(cursor, repository_keys):
     sql += f",\n\tFOREIGN KEY (owner, repository) REFERENCES repositorys (owner, repository)"
 
     sql += """,
-        PRIMARY KEY (id_issue"""
+        PRIMARY KEY (id_issue, owner, repository"""
 
-    for key in repository_keys:
-        sql += f", {key}"
+    # for key in repository_keys:
+    #     sql += f", {key}"
 
     sql += ")\n);"
 
@@ -95,10 +96,10 @@ def createRelationshipPullRequestsRepositorysScript(cursor, repository_keys):
         key BIGSERIAL,
         id_pull_request INTEGER"""
 
-    for key in repository_keys:
-        sql += f",\n\t{key} TEXT"
-
-    sql += ","
+    # for key in repository_keys:
+    #     sql += f",\n\t{key} TEXT"
+    sql += ",\n\towner TEXT"
+    sql += ",\n\trepository TEXT,"
 
     sql += """
         FOREIGN KEY (id_pull_request) REFERENCES pullrequests (id)"""
@@ -106,10 +107,10 @@ def createRelationshipPullRequestsRepositorysScript(cursor, repository_keys):
     sql += f",\n\tFOREIGN KEY (owner, repository) REFERENCES repositorys (owner, repository)"
 
     sql += """,
-        PRIMARY KEY (id_pull_request"""
+        PRIMARY KEY (id_pull_request, owner, repository"""
 
-    for key in repository_keys:
-        sql += f", {key}"
+    # for key in repository_keys:
+    #     sql += f", {key}"
 
     sql += ")\n);"
 

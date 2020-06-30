@@ -3,9 +3,6 @@ import os
 import psycopg2
 from lib.create_script import createTableScript, createRelationshipCommitsRepositorysScript, createRelationshipIssuesRepositorysScript, createRelationshipPullRequestsRepositorysScript
 from lib.alter_script import alterTableScript
-from id_linking_algorithms.simple_algorithm import start_simple_algorithm
-from id_linking_algorithms.bird_algorithm import start_bird_algorithm
-from id_linking_algorithms.normalizer import normalizer
 
 
 def insertCommitsCommand(keys, values, json_file):
@@ -22,7 +19,6 @@ def insertCommitsCommand(keys, values, json_file):
             sql += f"{atribute_name}, "
     sql += ") VALUES (\n"
     for i in range(len(keys)):
-        # t = type(json_file[keys[i]])
         if i == len(keys) - 1:
             sql += "%s) ON CONFLICT DO NOTHING;"
         else:
@@ -89,16 +85,6 @@ def insertRepositorysCommand(keys, values, json_file):
             sql += "%s, "
 
     return sql
-
-
-# def insertRepositorysRelationshipCommand():
-#     sql = f"""
-#         INSERT INTO
-#             repository_commits_issues_pullrequests (owner, repository, commit, id_issue, id_pull_request,)
-#         VALUES
-#             (%s, %s);
-#     """
-#     return sql
 
 
 def insertRepositorysRelationshipCommand(cursor, values, table_referenced):
@@ -223,52 +209,55 @@ def _getExistUsers(connection):
     return result
 
 
-def _getExistMaps(connection, algorithm):
-    sql = f"""
-        SELECT
-            json_build_object(map_identification.id, json_agg((identification.id, identification.name, identification.email)))
-        FROM
-            map_identification, identification
-        WHERE
-            map_identification.id_identification = identification.id AND map_identification.algorithm = '{algorithm}'
-        GROUP BY
-            map_identification.id
-        ;
-    """
-    result = []
-    cursor = connection.cursor()
-    cursor.execute(sql)
-    elements = cursor.fetchall()
-    for element in elements:
-        e = element[0]
-        key = int(list(e.keys())[0])
-        temp = {key: []}
-        for i in e.values():
-            for j in i:
-                temp[key].append(
-                    {"id": j["f1"], "name": j["f2"], "email": j["f3"], "normalized": normalizer(j["f3"])})
-        if len(temp) > 0:
-            result.append(temp)
+# def _getExistMaps(connection, algorithm):
+#     sql = f"""
+#         SELECT
+#             json_build_object(map_identification.id, json_agg((identification.id, identification.name, identification.email)))
+#         FROM
+#             map_identification, identification
+#         WHERE
+#             map_identification.id_identification = identification.id AND map_identification.algorithm = '{algorithm}'
+#         GROUP BY
+#             map_identification.id
+#         ;
+#     """
+#     result = []
+#     cursor = connection.cursor()
+#     cursor.execute(sql)
+#     elements = cursor.fetchall()
+#     for element in elements:
+#         e = element[0]
+#         key = int(list(e.keys())[0])
+#         temp = {key: []}
+#         for i in e.values():
+#             for j in i:
+#                 temp[key].append({
+#                     "id": j["f1"],
+#                     "name": j["f2"],
+#                     "email": j["f3"],
+#                     "normalized": normalizer(j["f3"])
+#                 })
+#         if len(temp) > 0:
+#             result.append(temp)
 
-    return result
+#     return result
 
-
-def _insertMapIdentification(map_identification, algorithm, connection):
-    cursor = connection.cursor()
-    # print(map_identification)
-    for i in map_identification:
-        # print(i)
-        for value in list(i.values())[0]:
-            id_value = int(list(i.keys())[0])
-            sql = """
-                INSERT INTO
-                    map_identification (id, id_identification, algorithm)
-                VALUES
-                    (%s, %s, %s)
-                ON CONFLICT DO NOTHING;
-            """
-            cursor.execute(sql, (id_value, value["id"], algorithm))
-            connection.commit()
+# def _insertMapIdentification(map_identification, algorithm, connection):
+#     cursor = connection.cursor()
+#     # print(map_identification)
+#     for i in map_identification:
+#         # print(i)
+#         for value in list(i.values())[0]:
+#             id_value = int(list(i.keys())[0])
+#             sql = """
+#                 INSERT INTO
+#                     map_identification (id, id_identification, algorithm)
+#                 VALUES
+#                     (%s, %s, %s)
+#                 ON CONFLICT DO NOTHING;
+#             """
+#             cursor.execute(sql, (id_value, value["id"], algorithm))
+#             connection.commit()
 
 
 def jsonToSql(connection, tables, repository):
@@ -318,17 +307,14 @@ def jsonToSql(connection, tables, repository):
         for item in repository[category]:
             attributes = item['data']
             if category == "commits":
-                # print(attributes)
                 user = attributes["Commit"]
                 i = user.find("<")
                 name = user[0:i].strip()
                 email = user[(i + 1):(len(user) - 1)]
                 user = {"name": name, "email": email}
                 id_user = _insertUser(user, connection)
-                # print(f"ID_USER ==> {id_user}")
                 if id_user:
                     user["id"] = id_user
-                    # print(user)
                     users.append(user)
             keys = []
             for key in attributes:
@@ -352,7 +338,7 @@ def jsonToSql(connection, tables, repository):
                     if category == "commits":
                         insertRepositorysRelationshipCommand(
                             cursor, (owner_name, repository_name,
-                                     attributes["commit"]), category)
+                                        attributes["commit"]), category)
                     else:
                         insertRepositorysRelationshipCommand(
                             cursor,
@@ -362,15 +348,15 @@ def jsonToSql(connection, tables, repository):
                 print(f"INSERTED DATA IN DB {category}")
             except Exception as e:
                 print(f" # Erro na inserção de dados: {e}")
-        if category == "commits":
-            maps_existent = _getExistMaps(connection, "Simple")
-            map_identification_simple = start_simple_algorithm(
-                users, maps_existent=maps_existent)
-            _insertMapIdentification(
-                map_identification_simple, "Simple", connection)
+        # if category == "commits":
+        #     maps_existent = _getExistMaps(connection, "Simple")
+        #     map_identification_simple = start_simple_algorithm(
+        #         users, maps_existent=maps_existent)
+        #     _insertMapIdentification(map_identification_simple, "Simple",
+        #                              connection)
 
-            maps_existent = _getExistMaps(connection, "Bird")
-            map_identification_simple = start_bird_algorithm(
-                users, maps_existent=maps_existent)
-            _insertMapIdentification(
-                map_identification_simple, "Bird", connection)
+        #     maps_existent = _getExistMaps(connection, "Bird")
+        #     map_identification_simple = start_bird_algorithm(
+        #         users, maps_existent=maps_existent)
+        #     _insertMapIdentification(map_identification_simple, "Bird",
+        #                              connection)

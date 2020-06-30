@@ -16,7 +16,7 @@ def levenshtein(s1, s2):
         for j, c2 in enumerate(s2):
             # j+1 instead of j since previous_row and current_row are one character longer
             insertions = previous_row[j + 1] + 1
-            deletions = current_row[j] + 1       # than s2
+            deletions = current_row[j] + 1  # than s2
             substitutions = previous_row[j] + (c1 != c2)
             current_row.append(min(insertions, deletions, substitutions))
         previous_row = current_row
@@ -34,15 +34,29 @@ def start_bird_algorithm(users, maps_existent=[]):
 
 
 def bird_algorithm(I, maps_existent):
-    return base_algorithm(I=I, maps_existent=maps_existent, shouldInclude=shouldInclude, p=0.3)
+    return base_algorithm(I=I,
+                          maps_existent=maps_existent,
+                          shouldInclude=shouldInclude,
+                          p=0.3)
+
+
+matriz = {}
 
 
 def shouldInclude(iMerge, i, p):
     check = False
     for x in list(iMerge.values())[0]:
-        size_1 = len(i["normalized"])
-        size_2 = len(x["normalized"])
-        if 1 - (levenshtein(i["normalized"], x["normalized"]))/(max([size_1, size_2])) >= p:
+        value = None
+        if ((i["normalized"], x["normalized"])) in matriz:
+            value = matriz[(i["normalized"], x["normalized"])]
+        else:
+            size_1 = len(i["normalized"])
+            size_2 = len(x["normalized"])
+            if (size_1 == 0 and size_2 == 0): continue
+            value = 1 - (levenshtein(i["normalized"], x["normalized"])) / (max(
+                [size_1, size_2]))
+            matriz[(i["normalized"], x["normalized"])] = value
+        if value >= p:
             check = True
             break
 
