@@ -264,18 +264,19 @@ def jsonToSql(connection, tables, repository):
     print("PARSING TO SQL...")
     cursor = connection.cursor()
 
-    owner_name = repository["repository"][0]["data"]["owner"]
-    repository_name = repository["repository"][0]["data"]["repository"]
+    owner_name = repository["repository"][0]["owner"]
+    repository_name = repository["repository"][0]["repository"]
 
     # Criação da tabela
     for category in repository:
         attributes = {}
         for item in repository[category]:
-            for key, value in item['data'].items():
+            for key, value in item.items():
                 if not (value is None):
                     attributes[key] = value
 
         keys = [key for key in attributes]
+        print(keys)
 
         try:
             _createTable(tables, keys, attributes, category, connection,
@@ -288,7 +289,7 @@ def jsonToSql(connection, tables, repository):
 
     for item in repository["repository"]:
         attributes = {}
-        for key, value in item['data'].items():
+        for key, value in item.items():
             if not (value is None):
                 attributes[key] = value
 
@@ -305,7 +306,7 @@ def jsonToSql(connection, tables, repository):
         users = []
         attributes = {}
         for item in repository[category]:
-            attributes = item['data']
+            attributes = item
             if category == "commits":
                 user = attributes["Commit"]
                 i = user.find("<")
@@ -338,7 +339,7 @@ def jsonToSql(connection, tables, repository):
                     if category == "commits":
                         insertRepositorysRelationshipCommand(
                             cursor, (owner_name, repository_name,
-                                        attributes["commit"]), category)
+                                     attributes["commit"]), category)
                     else:
                         insertRepositorysRelationshipCommand(
                             cursor,

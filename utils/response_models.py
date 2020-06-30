@@ -1,12 +1,15 @@
 from pydantic import BaseModel
 from typing import List, Any, Dict
 
+
 class RepoInput(BaseModel):
-  owner: str
-  repository: str
+    owner: str
+    repository: str
+
 
 class Insert(BaseModel):
-  repositorys: List[RepoInput]
+    repositorys: List[RepoInput]
+
 
 class Repository(BaseModel):
     forks_count: Any
@@ -33,129 +36,137 @@ class Repository(BaseModel):
     main_language: Any
     language: Any
 
+
 class Repositorys(BaseModel):
-  success: Any
+    success: Any
+
 
 class GetMetrics(BaseModel):
-  ci: Any
-  license: Any
-  history: Any
-  management: Any
-  documentation: Any
-  community: Any
-  tests: Any
+    ci: Any
+    license: Any
+    history: Any
+    management: Any
+    documentation: Any
+    community: Any
+    tests: Any
+
 
 class Classify(BaseModel):
     valid: Any
 
 
 class Issue(BaseModel):
-	assignees: Any
-	key: Any
-	pull_request: Any
-	milestone: Any
-	reactions_data: Any
-	comments_data: Any
-	assignees_data: Any
-	assignee_data: Any
-	user_data: Any
-	reactions: Any
-	body: Any
-	author_association: Any
-	closed_at: Any
-	updated_at: Any
-	created_at: Any
-	locked: Any
-	assignee: Any
-	comments: Any
-	url: Any
-	repository_url: Any
-	labels_url: Any
-	comments_url: Any
-	events_url: Any
-	html_url: Any
-	id: Any
-	node_id: Any
-	number: Any
-	title: Any
-	user_info: Any
-	labels: Any
-	state: Any
+    assignees: Any
+    key: Any
+    pull_request: Any
+    milestone: Any
+    reactions_data: Any
+    comments_data: Any
+    assignees_data: Any
+    assignee_data: Any
+    user_data: Any
+    reactions: Any
+    body: Any
+    author_association: Any
+    closed_at: Any
+    updated_at: Any
+    created_at: Any
+    locked: Any
+    assignee: Any
+    comments: Any
+    url: Any
+    repository_url: Any
+    labels_url: Any
+    comments_url: Any
+    events_url: Any
+    html_url: Any
+    id: Any
+    node_id: Any
+    number: Any
+    title: Any
+    user_info: Any
+    labels: Any
+    state: Any
+
 
 class Issues(BaseModel):
-	issues: Any
+    issues: Any
+
 
 class Commit(BaseModel):
-	message: Any
-	key: Any
-	merge: Any
-	files: Any
-	commiter: Any
-	commitdate: Any
-	signed_off_by: Any
-	commit: Any
-	parents: Any
-	refs: Any
-	author: Any
-	authordate: Any
+    message: Any
+    key: Any
+    merge: Any
+    files: Any
+    commiter: Any
+    commitdate: Any
+    signed_off_by: Any
+    commit: Any
+    parents: Any
+    refs: Any
+    author: Any
+    authordate: Any
+
 
 class Commits(BaseModel):
-	commits: Any
+    commits: Any
+
 
 class PR(BaseModel):
-	labels: Any
-	merge_commit_sha: Any
-	assignees: Any
-	requested_reviewers: Any
-	requested_teams: Any
-	draft: Any
-	commits_url: Any
-	review_comments_url: Any
-	review_comment_url: Any
-	comments_url: Any
-	statuses_url: Any
-	head: Any
-	base: Any
-	l_links: Any
-	author_association: Any
-	merged: Any
-	mergeable_state: Any
-	merged_by: Any
-	comments: Any
-	review_comments: Any
-	maintainer_can_modify: Any
-	commits: Any
-	additions: Any
-	deletions: Any
-	changed_files: Any
-	user_data: Any
-	review_comments_data: Any
-	reviews_data: Any
-	requested_reviewers_data: Any
-	merged_by_data: Any
-	commits_data: Any
-	assignee: Any
-	mergeable: Any
-	rebaseable: Any
-	milestone: Any
-	key: Any
-	url: Any
-	id: Any
-	node_id: Any
-	html_url: Any
-	diff_url: Any
-	patch_url: Any
-	issue_url: Any
-	number: Any
-	state: Any
-	locked: Any
-	title: Any
-	user_info: Any
-	body: Any
-	created_at: Any
-	updated_at: Any
-	closed_at: Any
-	merged_at: Any
+    labels: Any
+    merge_commit_sha: Any
+    assignees: Any
+    requested_reviewers: Any
+    requested_teams: Any
+    draft: Any
+    commits_url: Any
+    review_comments_url: Any
+    review_comment_url: Any
+    comments_url: Any
+    statuses_url: Any
+    head: Any
+    base: Any
+    l_links: Any
+    author_association: Any
+    merged: Any
+    mergeable_state: Any
+    merged_by: Any
+    comments: Any
+    review_comments: Any
+    maintainer_can_modify: Any
+    commits: Any
+    additions: Any
+    deletions: Any
+    changed_files: Any
+    user_data: Any
+    review_comments_data: Any
+    reviews_data: Any
+    requested_reviewers_data: Any
+    merged_by_data: Any
+    commits_data: Any
+    assignee: Any
+    mergeable: Any
+    rebaseable: Any
+    milestone: Any
+    key: Any
+    url: Any
+    id: Any
+    node_id: Any
+    html_url: Any
+    diff_url: Any
+    patch_url: Any
+    issue_url: Any
+    number: Any
+    state: Any
+    locked: Any
+    title: Any
+    user_info: Any
+    body: Any
+    created_at: Any
+    updated_at: Any
+    closed_at: Any
+    merged_at: Any
+
 
 class PullRequests(BaseModel):
-	pull_requests: Any
+    pull_requests: Any

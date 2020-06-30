@@ -1,6 +1,7 @@
 from github import Github
 import os
 
+
 def get_token():
     tokens = []
     index = 1
@@ -20,7 +21,7 @@ def get_token():
             if rate_limiting != None and rate_limiting > greatest_rate_limiting:
                 greatest_rate_limiting = rate_limiting
                 token_with_greatest_rate_limiting = token
-        except Exception as identifier:
+        except Exception:
             continue
 
     return token_with_greatest_rate_limiting

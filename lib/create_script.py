@@ -67,7 +67,7 @@ def createRelationshipIssuesRepositorysScript(cursor, repository_keys):
     sql = """
     CREATE TABLE IF NOT EXISTS repository_issues (
         key BIGSERIAL,
-        id_issue INTEGER"""
+        id_issue VARCHAR(100)"""
 
     # for key in repository_keys:
     #     sql += f",\n\t{key} TEXT"
@@ -94,7 +94,7 @@ def createRelationshipPullRequestsRepositorysScript(cursor, repository_keys):
     sql = """
     CREATE TABLE IF NOT EXISTS repository_pullrequests (
         key BIGSERIAL,
-        id_pull_request INTEGER"""
+        id_pull_request VARCHAR(100)"""
 
     # for key in repository_keys:
     #     sql += f",\n\t{key} TEXT"
