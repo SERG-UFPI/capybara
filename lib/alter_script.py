@@ -6,7 +6,7 @@ def alterTableScript(keys, cursor, json_file, table):
         atribute_name = key.lower().replace("-", "_")
         if atribute_name == "user":
             atribute_name = "user_info"
-        sql += "ADD COLUMN"
+        sql += "ADD COLUMN IF NOT EXISTS"
         if keys[-1] == key:
             if t is bool:
                 sql += f" {atribute_name} BOOLEAN;"

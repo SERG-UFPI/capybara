@@ -14,35 +14,162 @@ import lib.classifiers as cassifier
 from github import Github
 import tempfile
 from git_retriever.retriever import GithubRetriever
+from id_linking_algorithms.simple_algorithm import start_simple_algorithm
+from id_linking_algorithms.bird_algorithm import start_bird_algorithm
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 DB_CONNECTION = os.environ.get("DB_CONNECTION")
+
+
+def _insertMapIdentification(map_identification, algorithm, owner, repository, connection):
+    cursor = connection.cursor()
+    # print(map_identification)
+    for i in map_identification:
+        for value in list(i.values())[0]:
+            id_value = int(list(i.keys())[0])
+            sql = """
+                INSERT INTO
+                    map_identification (id, id_identification, algorithm, owner, repository)
+                VALUES
+                    (%s, %s, %s, %s, %s)
+                ON CONFLICT DO NOTHING;
+            """
+
+            cursor.execute(
+                sql, (id_value, value["id"], algorithm, owner, repository))
+            connection.commit()
+
+
+def linkIds(user_owner, repo_name, algo):
+    if algo.lower() != "simple" and algo.lower() != "bird":
+        print(algo)
+        return {"error": "Algorithm does not exist"}
+
+    conn = psycopg2.connect(DB_CONNECTION)
+    conn.autocommit = True
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS map_identification (
+            id BIGSERIAL,
+            owner TEXT,
+            repository TEXT,
+            id_identification INTEGER REFERENCES identification(id),
+            algorithm TEXT NOT NULL,
+            PRIMARY KEY (id, owner, repository, id_identification, algorithm)
+        );
+    """)
+
+    sql_result = f"""SELECT
+            map_identification.id, identification.name, identification.email, map_identification.algorithm
+        FROM
+            identification, map_identification
+        WHERE
+            identification.owner = \'{user_owner}\' AND
+            identification.repository = \'{repo_name}\' AND
+            identification.id = map_identification.id_identification AND
+            map_identification.algorithm=\'{algo.upper()}\'
+        ;"""
+
+    cursor.execute(sql_result)
+    tables = cursor.fetchall()
+
+    # print(f"Resultado busca 1: {tables}")
+    # print(type(tables))
+
+    map_identification = []
+
+    if tables != None and len(tables) > 0:
+        # print("Entrou")
+        for t in tables:
+            item = {
+                "id": t[0],
+                "name": t[1],
+                "email": t[2],
+                "algorithm": t[3]
+            }
+            map_identification.append(item)
+
+        # print(map_identification)
+        conn.close()
+        return {"map_identification": map_identification}
+
+    sql = f"""SELECT
+            id, name, email
+        FROM
+            identification
+        WHERE
+            identification.owner = \'{user_owner}\' AND
+            identification.repository = \'{repo_name}\'
+        ;"""
+
+    cursor.execute(sql)
+    tables = cursor.fetchall()
+
+    users = []
+    for user in tables:
+        users.append(
+            {
+                "id": user[0],
+                "name": user[1],
+                "email": user[2]
+            }
+        )
+    # print(users)
+
+    result = None
+
+    if algo.lower() == "simple":
+        result = start_simple_algorithm(users=users)
+        # print(result)
+        _insertMapIdentification(result, "SIMPLE", user_owner, repo_name, conn)
+    else:
+        result = start_bird_algorithm(users=users)
+        # print(result)
+        _insertMapIdentification(result, "BIRD", user_owner, repo_name, conn)
+
+    # print(f"Resultado: {result}")
+
+    # print(sql_result)
+
+    cursor.execute(sql_result)
+    tables = cursor.fetchall()
+
+    # print(f"Resultado busca 2: {tables}")
+
+    map_identification = []
+
+    if tables != None and len(tables) > 0:
+        for t in tables:
+            item = {
+                "id": t[0],
+                "name": t[1],
+                "email": t[2],
+                "algorithm": t[3]
+            }
+            map_identification.append(item)
+
+        # print(map_identification)
+        conn.close()
+        return {"map_identification": map_identification}
+    conn.close()
+
 
 def getCommits(user_owner, repo_name):
     with tempfile.TemporaryDirectory(dir=BASE_PATH) as atual_path:
         repo = Git(f"https://github.com/{user_owner}/{repo_name}.git",
                    f"{atual_path}/{user_owner}_{repo_name}.git")
         commits = repo.fetch()
-        return commits
+    return commits
 
 
 def getIssues(user_owner, repo_name, tokens):
-    # repo = GitHub(owner=user_owner,
-    #               repository=repo_name,
-    #               api_token=tokens,
-    #               sleep_for_rate=True)
-    # issues = repo.fetch(category="issue")
     gr = GithubRetriever(tokens=tokens)
     issues = gr.retrieve_issues(owner=user_owner, repository=repo_name)
     return issues
 
 
 def getPRs(user_owner, repo_name, tokens):
-    # repo = GitHub(owner=user_owner,
-    #               repository=repo_name,
-    #               api_token=tokens,
-    #               sleep_for_rate=True)
-    # prs = repo.fetch(category="pull_request")
     gr = GithubRetriever(tokens=tokens)
     prs = gr.retrieve_pullrequests(owner=user_owner, repository=repo_name)
     return prs
@@ -68,31 +195,17 @@ def getColumnsTable(cursor):
 
 
 def checkRepoExists(user_owner, repo_name, cursor):
-    sql = f"""
-        SELECT EXISTS (
-            SELECT *
-            FROM   information_schema.tables
-            WHERE  table_schema = 'serg'
-            AND    table_name = 'repositorys'
-        );
-    """
+    sql = f"""SELECT (owner, repository) FROM repositorys;"""
 
     cursor.execute(sql)
     tables = cursor.fetchall()
 
-    if tables[0][0]:
-        sql = f"""
-        SELECT
-            *
-        FROM
-            repositorys
-        WHERE
-            owner = {user_owner} AND
-            repository = {repo_name}
-        ;"""
-        cursor.execute(sql)
-        return cursor.fetchall()
-    return None
+    for repository in tables:
+        repo = repository[0].replace("(", "").replace(")", "").split(",")
+        if repo[0] == user_owner and repo[1] == repo_name:
+            return True
+
+    return False
 
 
 numFiles = 0
@@ -187,7 +300,9 @@ def generateRepository(user_owner, repo_name):
 
 def returnIssues(owner, repository, limit, pr_as_issue):
     conn = psycopg2.connect(DB_CONNECTION)
+    conn.autocommit = True
     # conn = psycopg2.connect(data_base_url)
+    conn.autocommit = True
     cursor = conn.cursor()
 
     tables = getColumnsTable(cursor)
@@ -234,6 +349,7 @@ def returnIssues(owner, repository, limit, pr_as_issue):
 
 def returnCommits(owner, repository, limit):
     conn = psycopg2.connect(DB_CONNECTION)
+    conn.autocommit = True
 
     cursor = conn.cursor()
 
@@ -280,6 +396,7 @@ def returnCommits(owner, repository, limit):
 
 def returnPullRequests(owner, repository, limit):
     conn = psycopg2.connect(DB_CONNECTION)
+    conn.autocommit = True
 
     cursor = conn.cursor()
 
@@ -326,6 +443,7 @@ def returnPullRequests(owner, repository, limit):
 
 def returnRepositorys():
     conn = psycopg2.connect(DB_CONNECTION)
+    conn.autocommit = True
 
     cursor = conn.cursor()
 
@@ -358,6 +476,7 @@ def returnRepositorys():
 
 def returnRepository(owner, repository):
     conn = psycopg2.connect(DB_CONNECTION)
+    conn.autocommit = True
 
     cursor = conn.cursor()
 
@@ -397,6 +516,7 @@ def returnRepository(owner, repository):
 
 def run(owner, repository_name):
     conn = psycopg2.connect(DB_CONNECTION)
+    conn.autocommit = True
 
     cursor = conn.cursor()
 
@@ -412,9 +532,15 @@ def run(owner, repository_name):
         else:
             break
 
-    repositorys = checkRepoExists(owner, repository_name, cursor)
+    tables = getColumnsTable(cursor)
 
-    if repositorys is None:
+    try:
+        repository_exists = checkRepoExists(owner, repository_name, cursor)
+    except Exception:
+        pass
+    repository_exists = False
+
+    if repository_exists is None or not repository_exists:
         print("GETING DATA...")
 
         commits = {}
@@ -429,20 +555,13 @@ def run(owner, repository_name):
 
         print("RETRIEVING ISSUES...")
         issues = getIssues(owner, repository_name, tokens)
+        # issues = []
         # issues = [item for item in temp if not ("pull_request" in item["data"].keys())]
         print("ISSUES RETRIEVED")
 
-        # return True
-
-        # metrics = get_all_metrics(owner, repository_name, issues, commits)
-
-        # if (not cassifier.run(metrics)):
-        #     raise Exception(
-        #         "O repositório não possui indícios suficientes de engenharia de software"
-        #     )
-
         print("RETRIEVING PULL_REQUESTS...")
         pullrequests = getPRs(owner, repository_name, tokens)
+        # pullrequests = []
         print("PULL_REQUESTS RETRIEVED")
 
         repository = {
@@ -453,13 +572,22 @@ def run(owner, repository_name):
         }
         print("DATA FETCHED!")
 
-        tables = getColumnsTable(cursor)
+        tables = None
+        try:
+            tables = getColumnsTable(cursor)
+        except Exception:
+            tables = []
+        # print(tables)
         jsonToSql(conn, tables, repository)
 
     conn.close()
 
 
 if __name__ == "__main__":
-    run("d3", "d3")
+    # run("d3", "d3")
+    # run("Mex978", "compilador")
     # run("ES2-UFPI", "Unichat")
+    # get_all_metrics("ES2-UFPI", "Unichat")
+    a = linkIds("ES2-UFPI", "Unichat", "simple")
+    print(a)
     # run("gatsbyjs", "gatsby")

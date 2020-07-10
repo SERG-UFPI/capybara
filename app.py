@@ -1,4 +1,4 @@
-from script import run, returnCommits, returnIssues, returnPullRequests, returnRepository, returnRepositorys
+from script import run, returnCommits, returnIssues, returnPullRequests, returnRepository, returnRepositorys, linkIds
 from lib.classifiers import run as classify
 from lib.get_metrics import get_all_metrics
 import utils.base_model as model
@@ -397,6 +397,42 @@ def classify_repo(repository: model.RepositoryMetrics):
         print(repository)
         saida = classify(repository.dict())
         return {"valid": saida}
+
+    except Exception as e:
+        return ({"error": str(e)})
+
+
+@ app.post('/linkIds', responses={200: {
+    "content": {
+        "application/json": {
+            "example": {"map_identification":
+                        [
+                            {'id': 1, 'name': 'Evandro Jr',
+                             'email': 'evandrojr@sei-info.com', 'algorithm': 'SIMPLE'},
+                            {'id': 2, 'name': 'GitHub',
+                             'email': 'noreply@github.com', 'algorithm': 'SIMPLE'},
+                            {'id': 3, 'name': 'Max', 'email': 'max.lima2@gmail.com',
+                             'algorithm': 'SIMPLE'},
+                            {'id': 3, 'name': 'Mex978',
+                             'email': 'max.lima2@gmail.com', 'algorithm': 'SIMPLE'},
+                            {'id': 4, 'name': 'netochaves',
+                             'email': 'netobac1@gmail.com', 'algorithm': 'SIMPLE'},
+                            {'id': 4, 'name': 'Neto Chaves',
+                             'email': 'netobac1@gmail.com', 'algorithm': 'SIMPLE'},
+                            {'id': 5, 'name': 'Sosolidkk',
+                             'email': 'pedrochaveslimas3@gmail.com', 'algorithm': 'SIMPLE'}
+
+                        ]}
+        }
+    }
+}})
+def link_ids(repository: model.RepositoryLinkIds):
+    try:
+        owner = repository.owner
+        repository_name = repository.repository
+        algorithm = repository.algorithm
+        map_identification = linkIds(owner, repository_name, algorithm)
+        return map_identification
 
     except Exception as e:
         return ({"error": str(e)})

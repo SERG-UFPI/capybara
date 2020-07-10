@@ -8,8 +8,11 @@ import json
 from id_linking_algorithms.simple_algorithm import start_simple_algorithm
 from utils.test_file_detector.testFileDetector import TestDetector
 from utils.get_token import get_token
+import psycopg2
+from lib.create_script import createTableScript
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+DB_CONNECTION = os.environ.get("DB_CONNECTION")
 
 
 def getListOfFiles(dirName):
@@ -107,9 +110,10 @@ def get_documentation_metric(path):
 def get_tests_metric(path):
     cloc_path = f"{path}/../../utils/cloc/cloc"
     content = ["blank", "comment", "code"]
-    parse = lambda string, index: (str(string)[index:].replace(
+    def parse(string, index): return (str(string)[index:].replace(
         "\n", "").replace("\'", "").replace("\"", "").split(",")[1:])
-    get_code = lambda x: float(x["code"] if "code" in x else 0)
+
+    def get_code(x): return float(x["code"] if "code" in x else 0)
 
     process = subprocess.Popen(["perl", cloc_path, path, "--csv"],
                                stdout=subprocess.PIPE,
@@ -271,7 +275,31 @@ def get_metric_license(owner="", repository=""):
 
 
 def get_all_metrics(owner, repository):
+    conn = psycopg2.connect(DB_CONNECTION)
+    conn.autocommit = True
+    cursor = conn.cursor()
     atual_path = tempfile.TemporaryDirectory(dir=BASE_PATH)
+    columns = ["ci", "license", "history", "management",
+               "documentation", "community", "tests"]
+
+    sql = f"""SELECT (ci, license, history, management, documentation, community, tests) FROM metrics WHERE metrics.owner=\'{owner}\' AND metrics.repository=\'{repository}\';"""
+
+    tables = None
+
+    try:
+        cursor.execute(sql)
+        tables = cursor.fetchall()
+        metrics_values = tables[0][0].replace(
+            "(", "").replace(")", "").split(",")
+        metrics = {}
+        for i in range(len(columns)):
+            metrics[columns[i]] = float(metrics_values[i])
+        conn.close()
+        return metrics
+    except Exception as e:
+        print(e)
+        pass
+
     try:
         downloadRepo(owner, repository, atual_path.name)
     except Exception as e:
@@ -291,7 +319,9 @@ def get_all_metrics(owner, repository):
 
     atual_path.cleanup()
 
-    return {
+    metrics = {
+        "owner": owner,
+        "repository": repository,
         "ci": ci_metric,
         "license": license_metric,
         "history": history_commits_metric,
@@ -300,6 +330,53 @@ def get_all_metrics(owner, repository):
         "community": community,
         "tests": tests_metric
     }
+
+    keys = list(metrics.keys())
+
+    # createTableScript(keys, cursor, metrics, "metrics")
+    sql = """"""
+    sql += f"CREATE TABLE IF NOT EXISTS metrics (\n"
+    sql += " key BIGSERIAL"
+    for key in keys:
+        t = type(metrics[key])
+        atribute_name = key.lower().replace("-", "_")
+
+        if t is bool:
+            sql += f",\n {atribute_name} BOOLEAN"
+        elif t is str:
+            sql += f",\n {atribute_name} TEXT"
+        elif t is list or t is dict:
+            sql += f",\n {atribute_name} JSON"
+        elif t is int:
+            sql += f",\n {atribute_name} INTEGER"
+        elif t is float:
+            sql += f",\n {atribute_name} DECIMAL"
+    sql += ",\n  PRIMARY KEY (owner, repository)"
+    sql += "\n);"
+    # print(sql)
+    cursor.execute(sql)
+
+    sql = "INSERT INTO metrics ("
+    for i in range(len(keys)):
+        atribute_name = keys[i].lower().replace("-", "_")
+        if i == len(keys) - 1:
+            sql += f"{atribute_name}"
+        else:
+            sql += f"{atribute_name}, "
+    sql += ") VALUES (\n"
+    for i in range(len(keys)):
+        if i == len(keys) - 1:
+            sql += "%s) ON CONFLICT DO NOTHING;"
+        else:
+            sql += "%s, "
+
+    values = list(metrics.values())
+
+    cursor.execute(sql, values)
+
+    conn.close()
+
+    return metrics
 
 
 # def main():

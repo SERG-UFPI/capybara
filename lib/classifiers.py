@@ -23,7 +23,7 @@ def run(metric_json):
     rf_org, rf_utl = loadClassifiers()
 
     result_org = rf_org.predict(item)
-    result_utl = rf_utl.predict(item)    
+    result_utl = rf_utl.predict(item)
 
     return (not result_org[0] or not result_utl[0])
 

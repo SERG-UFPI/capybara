@@ -3,9 +3,30 @@ import os
 import psycopg2
 from lib.create_script import createTableScript, createRelationshipCommitsRepositorysScript, createRelationshipIssuesRepositorysScript, createRelationshipPullRequestsRepositorysScript
 from lib.alter_script import alterTableScript
+from lib.commit_classifier import classifiy_commits_df
+import sys
 
 
-def insertCommitsCommand(keys, values, json_file):
+def print_psycopg2_exception(err):
+    # get details about the exception
+    err_type, err_obj, traceback = sys.exc_info()
+
+    # get the line number when exception occured
+    line_num = traceback.tb_lineno
+
+    # print the connect() error
+    print("\npsycopg2 ERROR:", err, "on line number:", line_num)
+    print("psycopg2 traceback:", traceback, "-- type:", err_type)
+
+    # psycopg2 extensions.Diagnostics object attribute
+    print("\nextensions.Diagnostics:", err.diag)
+
+    # print the pgcode and pgerror exceptions
+    print("pgerror:", err.pgerror)
+    print("pgcode:", err.pgcode, "\n")
+
+
+def insertCommitsCommand(keys):
     sql = "INSERT INTO commits ("
     for i in range(len(keys)):
         atribute_name = keys[i].lower().replace("-", "_")
@@ -27,7 +48,7 @@ def insertCommitsCommand(keys, values, json_file):
     return sql
 
 
-def insertIssuesCommand(keys, values, json_file):
+def insertIssuesCommand(keys):
     sql = "INSERT INTO issues ("
     for i in range(len(keys)):
         atribute_name = keys[i].lower().replace("-", "_")
@@ -47,7 +68,7 @@ def insertIssuesCommand(keys, values, json_file):
     return sql
 
 
-def insertPRsCommand(keys, values, json_file):
+def insertPRsCommand(keys):
     sql = "INSERT INTO pullrequests ("
     for i in range(len(keys)):
         atribute_name = keys[i].lower().replace("-", "_")
@@ -67,7 +88,7 @@ def insertPRsCommand(keys, values, json_file):
     return sql
 
 
-def insertRepositorysCommand(keys, values, json_file):
+def insertRepositorysCommand(keys):
     sql = "INSERT INTO repositorys ("
     for i in range(len(keys)):
         atribute_name = keys[i].lower().replace("-", "_")
@@ -108,7 +129,19 @@ def insertRepositorysRelationshipCommand(cursor, values, table_referenced):
 
 def _createTable(tables, keys, attributes, category, connection, cursor):
     table = 'repositorys' if category == 'repository' else category
+    if category == "commits":
+        attributes['corrective_pred'] = False
+        attributes['is_refactor_pred'] = False
+        attributes['perfective_pred'] = False
+        attributes['adaptive_pred'] = False
+
+        keys.append('corrective_pred')
+        keys.append('is_refactor_pred')
+        keys.append('perfective_pred')
+        keys.append('adaptive_pred')
+
     if table in tables:
+        print(f"Alterando tabela {table}")
         new_json = {}
         columns = [atrib["name"] for atrib in tables[table]]
         for key in attributes:
@@ -119,75 +152,75 @@ def _createTable(tables, keys, attributes, category, connection, cursor):
                 new_json[key] = attributes[key]
         if len(new_json) > 0:
             keys = [key for key in new_json]
+            print(f"New keys to add to table {table}: {keys}")
             alterTableScript(keys, cursor, new_json, table)
-            connection.commit()
     else:
+        print("1 ==> Entrou no script de criação da tabela")
         createTableScript(keys, cursor, attributes, table)
-        connection.commit()
 
 
 def _createRelationshipTable(connection, cursor, keys):
     createRelationshipCommitsRepositorysScript(cursor, keys)
     createRelationshipIssuesRepositorysScript(cursor, keys)
     createRelationshipPullRequestsRepositorysScript(cursor, keys)
-    connection.commit()
 
 
 def _insert(new_values, keys, values, attributes, cursor, connection,
             category):
     table = 'repositorys' if category == 'repository' else category
     if table == "commits":
-        sql = insertCommitsCommand(keys, values, attributes)
+        sql = insertCommitsCommand(keys)
     elif table == "issues":
-        sql = insertIssuesCommand(keys, values, attributes)
+        sql = insertIssuesCommand(keys)
     elif table == "pullrequests":
-        sql = insertPRsCommand(keys, values, attributes)
+        sql = insertPRsCommand(keys)
     elif table == "repositorys":
-        sql = insertRepositorysCommand(keys, values, attributes)
+        sql = insertRepositorysCommand(keys)
 
     cursor.execute(sql, new_values)
-    connection.commit()
 
 
 def _createIdentificationTables(connection):
     cursor = connection.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS identification (
+            owner TEXT,
+            repository TEXT,
             id BIGSERIAL UNIQUE,
             name VARCHAR NOT NULL,
             email VARCHAR NOT NULL,
-            PRIMARY KEY (name, email)
+            PRIMARY KEY (owner, repository, name, email)
         );
     """)
-    connection.commit()
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS map_identification (
             id BIGSERIAL,
+            owner TEXT,
+            repository TEXT,
             id_identification INTEGER REFERENCES identification(id),
-            algorithm VARCHAR NOT NULL,
-            PRIMARY KEY (id, id_identification)
+            algorithm TEXT NOT NULL,
+            PRIMARY KEY (id, owner, repository, id_identification)
         );
     """)
-    connection.commit()
 
 
-def _insertUser(user, connection):
+def _insertUser(user, repo, connection):
     cursor = connection.cursor()
     id_row = None
     sql = """
     INSERT INTO
-        identification (name, email)
+        identification (name, email, owner, repository)
     VALUES
-        (%s, %s)
+        (%s, %s, %s, %s)
     ON CONFLICT DO NOTHING
     RETURNING id;
     """
-    cursor.execute(sql, (user["name"], user["email"]))
+    cursor.execute(sql, (user["name"], user["email"],
+                         repo["owner"], repo["repository"]))
     returned_value = cursor.fetchone()
     if returned_value:
         id_row = returned_value[0]
-    connection.commit()
     return id_row
 
 
@@ -242,23 +275,6 @@ def _getExistUsers(connection):
 
 #     return result
 
-# def _insertMapIdentification(map_identification, algorithm, connection):
-#     cursor = connection.cursor()
-#     # print(map_identification)
-#     for i in map_identification:
-#         # print(i)
-#         for value in list(i.values())[0]:
-#             id_value = int(list(i.keys())[0])
-#             sql = """
-#                 INSERT INTO
-#                     map_identification (id, id_identification, algorithm)
-#                 VALUES
-#                     (%s, %s, %s)
-#                 ON CONFLICT DO NOTHING;
-#             """
-#             cursor.execute(sql, (id_value, value["id"], algorithm))
-#             connection.commit()
-
 
 def jsonToSql(connection, tables, repository):
     print("PARSING TO SQL...")
@@ -283,6 +299,7 @@ def jsonToSql(connection, tables, repository):
                          cursor)
             print(f"CREATED TABLE {category}")
         except Exception as e:
+            print_psycopg2_exception(e)
             print(f" # Erro na criação da tabela {category}: {e}")
 
     _createIdentificationTables(connection)
@@ -299,6 +316,7 @@ def jsonToSql(connection, tables, repository):
             _createRelationshipTable(connection, cursor, keys)
             print(f"CREATED RELATIONSHIP TABLES")
         except Exception as e:
+            print_psycopg2_exception(e)
             print(f" # Erro na criação de tabelas de relacionamento: {e}")
 
     # Inserção de items do db
@@ -307,13 +325,20 @@ def jsonToSql(connection, tables, repository):
         attributes = {}
         for item in repository[category]:
             attributes = item
+
             if category == "commits":
+                classification = classifiy_commits_df(attributes["message"])
+
+                for key in classification:
+                    attributes[key] = classification[key]
+
                 user = attributes["Commit"]
                 i = user.find("<")
                 name = user[0:i].strip()
                 email = user[(i + 1):(len(user) - 1)]
                 user = {"name": name, "email": email}
-                id_user = _insertUser(user, connection)
+                repo = {"owner": owner_name, "repository": repository_name}
+                id_user = _insertUser(user, repo, connection)
                 if id_user:
                     user["id"] = id_user
                     users.append(user)

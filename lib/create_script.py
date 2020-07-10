@@ -33,6 +33,7 @@ def createTableScript(keys, cursor, json_file, table):
         #     else:
         #         sql += f"{key}, "
     sql += "\n);"
+    # print(sql)
     cursor.execute(sql)
 
 
