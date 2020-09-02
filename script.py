@@ -455,8 +455,12 @@ def returnRepositorys():
     FROM
         repositorys;
     """
-    cursor.execute(sql)
-    lines = cursor.fetchall()
+    lines = []
+    try:
+        cursor.execute(sql)
+        lines = cursor.fetchall()
+    except Exception:
+        pass
 
     result = []
     print(lines)
