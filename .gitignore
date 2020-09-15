@@ -114,6 +114,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-https:
+cloned_repositories
 
 # End of https://www.gitignore.io/api/flask
