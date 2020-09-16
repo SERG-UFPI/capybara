@@ -41,19 +41,16 @@ class Commit(models.Model):
     adaptivePred = models.BooleanField(blank=True, null=True)
     perfectivePred = models.BooleanField(blank=True, null=True)
     isRefactorPred = models.BooleanField(blank=True, null=True)
-    parents = ArrayField(models.TextField(
-        blank=True, null=True), blank=True, null=True)
+    parents = ArrayField(models.TextField(blank=True, null=True), blank=True, null=True)
     author = models.TextField(blank=True, null=True)
     authorDate = models.FloatField(blank=True, null=True)
     commiter = models.TextField(blank=True, null=True)
     commitDate = models.FloatField(blank=True, null=True)
     message = models.TextField(blank=True, null=True)
-    files = ArrayField(models.JSONField(
-        blank=True, null=True), blank=True, null=True)
+    files = ArrayField(models.JSONField(blank=True, null=True), blank=True, null=True)
     merge = models.TextField(blank=True, null=True)
     correctivePred = models.BooleanField(blank=True, null=True)
-    repository = models.ForeignKey(
-        Repository, on_delete=models.CASCADE)
+    repository = models.ForeignKey(Repository, on_delete=models.CASCADE)
 
 
 class Issue(models.Model):
@@ -62,12 +59,12 @@ class Issue(models.Model):
     activeLockReason = models.TextField(blank=True, null=True)
     milestone = models.JSONField(blank=True, null=True)
     author = models.JSONField(blank=True, null=True)
-    labels = ArrayField(models.JSONField(
-        blank=True, null=True), blank=True, null=True)
+    labels = ArrayField(models.JSONField(blank=True, null=True), blank=True, null=True)
     title = models.TextField(blank=True, null=True)
     number = models.IntegerField(blank=True, null=True)
-    assignee = ArrayField(models.JSONField(
-        blank=True, null=True), blank=True, null=True)
+    assignee = ArrayField(
+        models.JSONField(blank=True, null=True), blank=True, null=True
+    )
     locked = models.BooleanField(blank=True, null=True)
     state = models.TextField(blank=True, null=True)
     createdAt = models.IntegerField(blank=True, null=True)
@@ -75,23 +72,26 @@ class Issue(models.Model):
     key = models.IntegerField(blank=True, null=True)
     closedAt = models.IntegerField(blank=True, null=True)
     comments = models.IntegerField(blank=True, null=True)
-    assignees = ArrayField(models.JSONField(
-        blank=True, null=True), blank=True, null=True)
-    reactions = ArrayField(models.JSONField(
-        blank=True, null=True), blank=True, null=True)
+    assignees = ArrayField(
+        models.JSONField(blank=True, null=True), blank=True, null=True
+    )
+    reactions = ArrayField(
+        models.JSONField(blank=True, null=True), blank=True, null=True
+    )
     body = models.TextField(blank=True, null=True)
-    repository = models.ForeignKey(
-        Repository, on_delete=models.CASCADE)
+    repository = models.ForeignKey(Repository, on_delete=models.CASCADE)
 
 
 class PullRequest(models.Model):
     id = models.TextField(primary_key=True)
     url = models.TextField(blank=True, null=True)
     additions = models.IntegerField(blank=True, null=True)
-    assignee = ArrayField(models.JSONField(
-        blank=True, null=True), blank=True, null=True)
-    assignees = ArrayField(models.JSONField(
-        blank=True, null=True), blank=True, null=True)
+    assignee = ArrayField(
+        models.JSONField(blank=True, null=True), blank=True, null=True
+    )
+    assignees = ArrayField(
+        models.JSONField(blank=True, null=True), blank=True, null=True
+    )
     authorAssociation = models.TextField(blank=True, null=True)
     baseRefOid = models.TextField(blank=True, null=True)
     baseRefName = models.TextField(blank=True, null=True)
@@ -106,8 +106,7 @@ class PullRequest(models.Model):
     isDraft = models.BooleanField(blank=True, null=True)
     headRefOid = models.TextField(blank=True, null=True)
     headRefName = models.TextField(blank=True, null=True)
-    labels = ArrayField(models.JSONField(
-        blank=True, null=True), blank=True, null=True)
+    labels = ArrayField(models.JSONField(blank=True, null=True), blank=True, null=True)
     locked = models.BooleanField(blank=True, null=True)
     maintainerCanModify = models.BooleanField(blank=True, null=True)
     mergeable = models.TextField(blank=True, null=True)
@@ -123,8 +122,7 @@ class PullRequest(models.Model):
     milestone = models.JSONField(blank=True, null=True)
     activeLockReason = models.TextField(blank=True, null=True)
     key = models.IntegerField(blank=True, null=True)
-    repository = models.ForeignKey(
-        Repository, on_delete=models.CASCADE)
+    repository = models.ForeignKey(Repository, on_delete=models.CASCADE)
 
 
 class Identification(models.Model):
@@ -135,8 +133,7 @@ class Identification(models.Model):
 
 class MapIdentification(models.Model):
     group = models.IntegerField()
-    identification = models.ForeignKey(
-        Identification, on_delete=models.CASCADE)
+    identification = models.ForeignKey(Identification, on_delete=models.CASCADE)
     algorithm = models.TextField()
     repository = models.ForeignKey(Repository, on_delete=models.CASCADE)
 

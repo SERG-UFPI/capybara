@@ -1,15 +1,15 @@
-from pygount import SourceAnalysis, ProjectSummary
-from api.lib import consts
-from github import Github
-from pathlib import Path
-from glob import glob
 import datetime
-import pydotenv
-import requests
-import time
 import os
 import re
+import time
+from pathlib import Path
 
+import pydotenv
+import requests
+from github import Github
+from pygount import ProjectSummary, SourceAnalysis
+
+from api.lib import consts
 
 global _numFiles
 
@@ -26,7 +26,7 @@ def get_best_token():
         g_temp = Github(token)
         try:
             rate_limiting = g_temp.rate_limiting[0]
-            if rate_limiting != None and rate_limiting > greatest_rate_limiting:
+            if rate_limiting is None and rate_limiting > greatest_rate_limiting:
                 greatest_rate_limiting = rate_limiting
                 token_with_greatest_rate_limiting = token
         except Exception:
@@ -36,8 +36,9 @@ def get_best_token():
 
 
 def get_tokens():
-    return [ENV.get(f'TOKEN_{x}')
-            for x in range(1, 9999) if ENV.get(f'TOKEN_{x}', None)]
+    return [
+        ENV.get(f"TOKEN_{x}") for x in range(1, 9999) if ENV.get(f"TOKEN_{x}", None)
+    ]
 
 
 def getNumFilesAux(path):
@@ -45,10 +46,10 @@ def getNumFilesAux(path):
     contents = os.listdir(path)
 
     for content in contents:
-        content_path = path + '/' + content
+        content_path = path + "/" + content
 
         if os.path.isdir(content_path):
-            if (content == '.git'):
+            if content == ".git":
                 continue
             else:
                 getNumFilesAux(content_path)
@@ -70,14 +71,16 @@ def run_query(query, tokens):
     for token in list_tokens[:]:
         try:
             _header = {"Authorization": f"Bearer {token}"}
-            request = requests.post(consts.BASE_URL, json={
-                                    'query': query}, headers=_header)
+            request = requests.post(
+                consts.BASE_URL, json={"query": query}, headers=_header
+            )
 
             if request.status_code == 200:
                 return request.json()
             else:
                 raise Exception(
-                    f"Query failed to run by returning code of {request.status_code}\nMessage: \"{request.content}\"")
+                    f'Query failed to run by returning code of {request.status_code}\nMessage: "{request.content}"'
+                )
         except Exception as e:
             print(e)
             list_tokens.insert(-1, list_tokens.pop())
@@ -115,37 +118,49 @@ def parseJsonAux(item):
 
 
 def toDate(timestamp):
-    return None if timestamp is None else time.strftime("%a %d %b %Y %H:%M:%S GMT", time.gmtime(float(timestamp) / 1000.0))
+    return (
+        None
+        if timestamp is None
+        else time.strftime(
+            "%a %d %b %Y %H:%M:%S GMT", time.gmtime(float(timestamp) / 1000.0)
+        )
+    )
 
 
 def toTimestamp(date):
-    return None if date is None else time.mktime(datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ").timetuple())
+    return (
+        None
+        if date is None
+        else time.mktime(
+            datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ").timetuple()
+        )
+    )
 
 
 def camelToSnake(s):
-    _underscorer1 = re.compile(r'(.)([A-Z][a-z]+)')
-    _underscorer2 = re.compile('([a-z0-9])([A-Z])')
-    subbed = _underscorer1.sub(r'\1_\2', s)
-    return _underscorer2.sub(r'\1_\2', subbed).lower()
+    _underscorer1 = re.compile(r"(.)([A-Z][a-z]+)")
+    _underscorer2 = re.compile("([a-z0-9])([A-Z])")
+    subbed = _underscorer1.sub(r"\1_\2", s)
+    return _underscorer2.sub(r"\1_\2", subbed).lower()
 
 
 def toCamelCase(snake_str):
     str = camelToSnake(snake_str)
-    components = str.split('_')
+    components = str.split("_")
     if len(components) < 1:
         return components
         # We capitalize the first letter of each component except the first one
         # with the 'title' method and join them together.
-    return components[0].lower() + ''.join(x.title() for x in components[1:])
+    return components[0].lower() + "".join(x.title() for x in components[1:])
 
 
 def counterProject(path):
-    '''
+    """
     Returns:
         - Sum of code lines
         - Sum of documentation lines
         - Sum of empty lines
-    '''
+    """
     ps = ProjectSummary()
 
     source_paths = None
@@ -190,4 +205,5 @@ def getListOfFiles(dirName):
     return allFiles
 
 
-def without_keys(d, keys): return {x: d[x] for x in d if x not in keys}
+def without_keys(d, keys):
+    return {x: d[x] for x in d if x not in keys}

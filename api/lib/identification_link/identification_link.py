@@ -1,8 +1,8 @@
+from api import models, serializers
+from api.lib import utils
+
 from .bird_algorithm import start_bird_algorithm
 from .simple_algorithm import start_simple_algorithm
-from api import serializers
-from api import models
-from api.lib import utils
 
 
 def run(owner, repository, algorithm):
@@ -11,27 +11,33 @@ def run(owner, repository, algorithm):
 
     try:
         repository_retrieved = models.Repository.objects.get(
-            owner=owner, repository=repository)
+            owner=owner, repository=repository
+        )
         map_identification_retrieved = models.MapIdentification.objects.filter(
-            repository=repository_retrieved.pk)
+            repository=repository_retrieved.pk
+        )
         map_identification_list = []
         if map_identification_retrieved.exists():
-            map_identification_list = [utils.without_keys(
-                item, ['id', 'repository_id']) for item in map_identification_retrieved.values()]
+            map_identification_list = [
+                utils.without_keys(item, ["id", "repository_id"])
+                for item in map_identification_retrieved.values()
+            ]
 
             for item in map_identification_list:
                 _user = models.Identification.objects.filter(
-                    repository=repository_retrieved.pk).get(id=item['identification_id'])
+                    repository=repository_retrieved.pk
+                ).get(id=item["identification_id"])
 
-                item['name'] = _user.name
-                item['email'] = _user.email
+                item["name"] = _user.name
+                item["email"] = _user.email
 
-                del item['identification_id']
+                del item["identification_id"]
 
             return map_identification_list
         else:
             users_identification_retrieved = models.Identification.objects.filter(
-                repository=repository_retrieved.pk)
+                repository=repository_retrieved.pk
+            )
             if users_identification_retrieved.exists():
                 users_list = list(users_identification_retrieved.values())
                 result = None
@@ -44,27 +50,26 @@ def run(owner, repository, algorithm):
                 for key in result:
                     for user in result[key]:
                         _item = {
-                            'group': key,
-                            'identification': user['id'],
-                            'name': user['name'],
-                            'email': user['email'],
-                            'algorithm': algorithm,
-                            'repository': repository_retrieved.pk
+                            "group": key,
+                            "identification": user["id"],
+                            "name": user["name"],
+                            "email": user["email"],
+                            "algorithm": algorithm,
+                            "repository": repository_retrieved.pk,
                         }
 
-                        serializer = serializers.MapIdentificationSerializer(
-                            data=_item)
+                        serializer = serializers.MapIdentificationSerializer(data=_item)
                         if serializer.is_valid():
                             serializer.save()
 
-                        map_identification.append(utils.without_keys(
-                            _item, ['identification', 'repository']))
+                        map_identification.append(
+                            utils.without_keys(_item, ["identification", "repository"])
+                        )
 
                 return map_identification
 
             else:
-                raise Exception(
-                    {'error': 'No users founded for target repository'})
+                raise Exception({"error": "No users founded for target repository"})
     except models.Repository.DoesNotExist as e:
         raise e
 

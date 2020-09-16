@@ -1,11 +1,10 @@
-from api.lib.test_file_detector import testFileDetector
+import os
+from datetime import datetime
+from pathlib import Path
+
 from api import models
 from api.lib import utils
-from github import Github
-from pathlib import Path
-from glob import glob
-from datetime import datetime
-import os
+from api.lib.test_file_detector import testFileDetector
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
@@ -13,9 +12,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 def get_documentation_metric(path):
     _, comment_lines, blank_lines = utils.counterProject(path)
 
-    return (float(comment_lines) /
-            (float(comment_lines) + float(blank_lines))) if (comment_lines +
-                                                             blank_lines) != 0 else 0
+    return (
+        (float(comment_lines) / (float(comment_lines) + float(blank_lines)))
+        if (comment_lines + blank_lines) != 0
+        else 0
+    )
 
 
 def get_tests_metric(path):
@@ -38,14 +39,14 @@ def get_community_metric(commits):
 
     for commit in commits:
         author = commit["data"]["author"]
-        user = author['name']
+        user = author["name"]
         commiters_commits[user] = commiters_commits.get(user, []) + [commit]
 
     commiters_commits = {
         k: v
-        for k, v in sorted(commiters_commits.items(),
-                           key=lambda item: len(item[1]),
-                           reverse=True)
+        for k, v in sorted(
+            commiters_commits.items(), key=lambda item: len(item[1]), reverse=True
+        )
     }
 
     commiters_len_commits = []
@@ -66,28 +67,24 @@ def retrieve_commits(owner, repository):
     commits = []
 
     repository_retrieved = models.Repository.objects.get(
-        owner=owner, repository=repository)
+        owner=owner, repository=repository
+    )
     commits_retrieved = models.Commit.objects.filter(
-        repository=repository_retrieved.pk).values('author', 'authorDate', 'message')
+        repository=repository_retrieved.pk
+    ).values("author", "authorDate", "message")
 
     for commit in commits_retrieved:
-        user = commit['author']
+        user = commit["author"]
         i = user.find("<")
 
         name = user[0:i].strip()
-        email = user[(i + 1):(len(user) - 1)]
-        updated_on = commit['authorDate']
-        message = commit['message']
+        email = user[(i + 1) : (len(user) - 1)]
+        updated_on = commit["authorDate"]
+        message = commit["message"]
 
         item = {
-            'updated_on': updated_on,
-            'data': {
-                'author': {
-                    'name': name,
-                    'email': email
-                },
-                'message': message
-            }
+            "updated_on": updated_on,
+            "data": {"author": {"name": name, "email": email}, "message": message},
         }
         commits.append(item)
 
@@ -97,23 +94,25 @@ def retrieve_commits(owner, repository):
 def retrieve_issues(owner, repository):
     issues = []
     repository_retrieved = models.Repository.objects.get(
-        owner=owner, repository=repository)
+        owner=owner, repository=repository
+    )
     issues_retrieved = models.Issue.objects.filter(
-        repository=repository_retrieved.pk).values()
+        repository=repository_retrieved.pk
+    ).values()
 
     for issue in issues_retrieved:
-        name = issue['author']['name']
-        email = issue['author']['email']
-        updated_on = issue['createdAt']
+        name = issue["author"]["name"]
+        email = issue["author"]["email"]
+        updated_on = issue["createdAt"]
 
         item = {
-            'updated_on': updated_on,
-            'data': {
-                'author': {
-                    'name': name,
-                    'email': email,
+            "updated_on": updated_on,
+            "data": {
+                "author": {
+                    "name": name,
+                    "email": email,
                 }
-            }
+            },
         }
 
         issues.append(item)
@@ -138,7 +137,8 @@ def get_metric_history(data):
     biggest_date = datetime.fromtimestamp(biggest_date)
     lowest_date = datetime.fromtimestamp(lowest_date)
     num_months = (biggest_date.year - lowest_date.year) * 12 + (
-        biggest_date.month - lowest_date.month)
+        biggest_date.month - lowest_date.month
+    )
 
     return (num_data / num_months) if num_months > 0 else num_data
 
@@ -159,7 +159,7 @@ def get_metric_continuous_integration(path):
 def get_metric_license(path):
     files = utils.getListOfFiles(path)
     for file in files:
-        if file.find('LICENSE') != -1:
+        if file.find("LICENSE") != -1:
             return 1
     return 0
 
@@ -185,7 +185,7 @@ def get_all_metrics(owner, repository):
             "management": history_issues_metric,
             "documentation": documentation_metric,
             "community": community,
-            "tests": tests_metric
+            "tests": tests_metric,
         }
 
         return metrics

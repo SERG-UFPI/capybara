@@ -5,7 +5,7 @@ from api.lib import utils
 def getRepositoryInfo(owner, repository):
     _token = utils.get_best_token()
     g = Github(_token)
-    repo = g.get_repo(f'{owner}/{repository}')
+    repo = g.get_repo(f"{owner}/{repository}")
 
     owner_avatar_url = repo.owner.avatar_url
     fullname = repo.full_name
@@ -31,35 +31,34 @@ def getRepositoryInfo(owner, repository):
 
     # A linguagem com o maior número de linhas de código será a main_language
     aux = repo.get_languages()
-    aux = {k: v for k, v in sorted(
-        aux.items(), key=lambda item: item[1])}
+    aux = {k: v for k, v in sorted(aux.items(), key=lambda item: item[1])}
     main_language = list(aux.keys())[-1]
 
     num_files = utils.getNumFiles(owner, repository)
 
     return {
-        'owner_avatar_url': owner_avatar_url,
-        'owner': owner,
-        'repository': repository,
-        'has_wiki': has_wiki,
-        'fullname': fullname,
-        'clone_url': clone_url,
-        'created_at': created_at,
-        'default_branch': default_branch,
-        'description': description,
-        'fork': fork,
-        'forks_count': forks_count,
-        'homepage': homepage,
-        'language': language,
-        'main_language': main_language,
-        'name': name,
-        'open_issues': open_issues,
-        'pushed_at': pushed_at,
-        'stargazers_count': stargazers_count,
-        'updated_at': updated_at,
-        'watchers_count': watchers_count,
-        'subscribers_count': subscribers_count,
-        'archived': archived,
-        'num_files': num_files,
-        'size': size
+        "owner_avatar_url": owner_avatar_url,
+        "owner": owner,
+        "repository": repository,
+        "has_wiki": has_wiki,
+        "fullname": fullname,
+        "clone_url": clone_url,
+        "created_at": created_at,
+        "default_branch": default_branch,
+        "description": description,
+        "fork": fork,
+        "forks_count": forks_count,
+        "homepage": homepage,
+        "language": language,
+        "main_language": main_language,
+        "name": name,
+        "open_issues": open_issues,
+        "pushed_at": pushed_at,
+        "stargazers_count": stargazers_count,
+        "updated_at": updated_at,
+        "watchers_count": watchers_count,
+        "subscribers_count": subscribers_count,
+        "archived": archived,
+        "num_files": num_files,
+        "size": size,
     }

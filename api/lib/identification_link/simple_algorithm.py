@@ -1,18 +1,17 @@
-from . import normalizer
-from . import base_algorithm
+from . import base_algorithm, normalizer
 
 
 def start_simple_algorithm(users):
-    I = []
+    _i = []
     for user in users:
         temp = user
         temp["normalized"] = normalizer.run(user["email"])
-        I.append(temp)
-    return simple_algorithm(I)
+        _i.append(temp)
+    return simple_algorithm(_i)
 
 
-def simple_algorithm(I):
-    return base_algorithm.run(I=I, shouldInclude=shouldInclude, p=0.3)
+def simple_algorithm(_i):
+    return base_algorithm.run(_i=_i, shouldInclude=shouldInclude, p=0.3)
 
 
 def shouldInclude(iMerge, i, p):

@@ -63,7 +63,7 @@ def milestoneInfoQuery():
 
 
 def queryGetPullRequests(cursor, owner, repository, limit):
-    _cursor = "null" if cursor is None else ("\"" + cursor + "\"")
+    _cursor = "null" if cursor is None else ('"' + cursor + '"')
     return f"""
 {{
   repository(owner: "{owner}", name: "{repository}") {{
@@ -139,7 +139,7 @@ def queryGetPullRequests(cursor, owner, repository, limit):
 
 
 def queryGetIssues(cursor, owner, repository, limit):
-    _cursor = "null" if cursor is None else ("\"" + cursor + "\"")
+    _cursor = "null" if cursor is None else ('"' + cursor + '"')
     return f"""
 {{
   repository(owner: "{owner}", name: "{repository}") {{

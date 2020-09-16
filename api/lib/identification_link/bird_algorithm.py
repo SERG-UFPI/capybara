@@ -1,5 +1,4 @@
-from . import normalizer
-from . import base_algorithm
+from . import base_algorithm, normalizer
 
 
 def levenshtein(s1, s2):
@@ -23,18 +22,16 @@ def levenshtein(s1, s2):
 
 
 def start_bird_algorithm(users):
-    I = []
+    _i = []
     for user in users:
         temp = user
         temp["normalized"] = normalizer.run(user["email"])
-        I.append(temp)
-    return bird_algorithm(I)
+        _i.append(temp)
+    return bird_algorithm(_i)
 
 
-def bird_algorithm(I):
-    return base_algorithm.run(I=I,
-                              shouldInclude=shouldInclude,
-                              p=0.3)
+def bird_algorithm(_i):
+    return base_algorithm.run(_i=_i, shouldInclude=shouldInclude, p=0.3)
 
 
 matriz = {}
@@ -49,10 +46,11 @@ def shouldInclude(iMerge, i, p):
         else:
             size_1 = len(i["normalized"])
             size_2 = len(x["normalized"])
-            if (size_1 == 0 and size_2 == 0):
+            if size_1 == 0 and size_2 == 0:
                 continue
-            value = 1 - (levenshtein(i["normalized"], x["normalized"])) / (max(
-                [size_1, size_2]))
+            value = 1 - (levenshtein(i["normalized"], x["normalized"])) / (
+                max([size_1, size_2])
+            )
             matriz[(i["normalized"], x["normalized"])] = value
         if value >= p:
             check = True

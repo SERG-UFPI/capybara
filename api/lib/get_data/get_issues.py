@@ -1,6 +1,8 @@
-from api.lib import consts, utils
-from . import querys
 import time
+
+from api.lib import consts, utils
+
+from . import querys
 
 
 def getIssues(owner, repository):
@@ -10,19 +12,18 @@ def getIssues(owner, repository):
     cursor = None
     while 1:
         query = querys.queryGetIssues(
-            cursor, owner, repository, consts.LIMIT_QUERY_RESULT)
+            cursor, owner, repository, consts.LIMIT_QUERY_RESULT
+        )
         init = time.time()
         result = utils.run_query(query, tokens)
-        if not result is None:
+        if not result:
             issues += result["data"]["repository"]["issues"]["nodes"]
             hasNext = result["data"]["repository"]["issues"]["pageInfo"]["hasNextPage"]
             cursor = result["data"]["repository"]["issues"]["pageInfo"]["endCursor"]
             totalCount = result["data"]["repository"]["issues"]["totalCount"]
-            print(
-                f"{len(issues)} de {totalCount} issues recuperadas")
-        print(
-            f"Foram usados {time.time() - init} segundos")
-        if (not hasNext):
+            print(f"{len(issues)} de {totalCount} issues recuperadas")
+        print(f"Foram usados {time.time() - init} segundos")
+        if not hasNext:
             break
 
     issues = utils.parseJson(issues)

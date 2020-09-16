@@ -1,16 +1,17 @@
-from api.lib.test_file_detector.fileAnalysis import *
-from api.lib.test_file_detector.utilities import *
 import os
+
+from api.lib.test_file_detector.fileAnalysis import test_include, test_keyword
+from api.lib.test_file_detector.utilities import lookup_generator, tech_lookup_generator
 
 BASE_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 class TestDetector:
     def __init__(self):
-        self.keyword_lookup = lookup_generator(BASE_PATH +
-                                               "/keywords.txt")  # keywords
+        self.keyword_lookup = lookup_generator(BASE_PATH + "/keywords.txt")  # keywords
         self.tech_lookup = tech_lookup_generator(
-            BASE_PATH + "/testingTechnologiesFixed3.csv")  # testtechs
+            BASE_PATH + "/testingTechnologiesFixed3.csv"
+        )  # testtechs
 
     def get_file_contents(self, file_path):
         file_contents = ""
@@ -34,14 +35,12 @@ class TestDetector:
         file_contents = self.get_file_contents(file_path)
 
         # verifica se o arquivo possui o import de um framework de teste conhecido
-        has_test_import = test_include(self.tech_lookup, file_extension,
-                                       file_contents)
+        has_test_import = test_include(self.tech_lookup, file_extension, file_contents)
 
         # verifica se o arquivo possui a chamada de funcao de um framework de teste conhecido
-        has_test_call = test_keyword(self.keyword_lookup, file_extension,
-                                     file_contents)
+        has_test_call = test_keyword(self.keyword_lookup, file_extension, file_contents)
 
         # caso o arquivo tenha o import de teste E a chamada de função de teste, é considerado um arquivo de teste
-        is_test_file = (has_test_import + has_test_call == 2)
+        is_test_file = has_test_import + has_test_call == 2
 
         return is_test_file
