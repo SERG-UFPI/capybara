@@ -6,7 +6,7 @@ from api.lib import utils
 from api.lib.classifier import commit_classifier
 
 
-def parseCommits(owner, repository, commits):
+def parse_commits(owner, repository, commits):
     repo = models.Repository.objects.get(owner=owner, repository=repository)
     for item in commits:
         try:
@@ -14,7 +14,7 @@ def parseCommits(owner, repository, commits):
 
             classification = commit_classifier.run(item["message"])
             for key in classification:
-                commit_attributes[utils.toCamelCase(key)] = classification[key]
+                commit_attributes[utils.to_camel_case(key)] = classification[key]
 
             user = item["Author"]
             i = user.find("<")
@@ -30,7 +30,7 @@ def parseCommits(owner, repository, commits):
                     commit_attributes["commiter"] = item[key]
                     continue
                 if key.lower().find("date") != -1:
-                    commit_attributes[utils.toCamelCase(key)] = (
+                    commit_attributes[utils.to_camel_case(key)] = (
                         None
                         if item[key] is None
                         else time.mktime(
@@ -39,9 +39,9 @@ def parseCommits(owner, repository, commits):
                             ).timetuple()
                         )
                     )
-                    print(commit_attributes[utils.toCamelCase(key)])
+                    print(commit_attributes[utils.to_camel_case(key)])
                     continue
-                commit_attributes[utils.toCamelCase(key)] = item[key]
+                commit_attributes[utils.to_camel_case(key)] = item[key]
 
             identification_serializer = serializers.FullIdentificationSerializer(
                 data=user

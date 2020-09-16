@@ -30,11 +30,11 @@ class Retriever:
         ]
         _threads = [Thread(target=f) for f in functions]
 
-        for t in _threads:
-            t.start()
+        for thread in _threads:
+            thread.start()
 
-        for t in _threads:
-            t.join()
+        for thread in _threads:
+            thread.join()
 
     def _get_repository_info(self):
         print("===> Retrieving repository data...")
@@ -63,12 +63,12 @@ class Retriever:
 
     def _get_issues(self):
         print("===> Retrieving issues...")
-        self.issues = get_issues.getIssues(self._owner, self._repository)
+        self.issues = get_issues.get_issues(self._owner, self._repository)
         print("<== Issues retrieved")
 
     def _get_pullrequests(self):
         print("===> Retrieving pullrequests...")
-        self.pullrequests = get_pullrequests.getPullrequests(
+        self.pullrequests = get_pullrequests.get_pullrequests(
             self._owner, self._repository
         )
         print("<== Pullrequests retrieved")
@@ -86,5 +86,5 @@ class Retriever:
                     f"https://github.com/{self._owner}/{self._repository}.git"
                 )
                 print("<== Repository cloned")
-            except Exception as e:
-                print(f"Error on clone repository: {e}")
+            except Exception as error:
+                print(f"Error on clone repository: {error}")

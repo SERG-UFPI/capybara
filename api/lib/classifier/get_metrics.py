@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 
 def get_documentation_metric(path):
-    _, comment_lines, blank_lines = utils.counterProject(path)
+    _, comment_lines, blank_lines = utils.counter_project(path)
 
     return (
         (float(comment_lines) / (float(comment_lines) + float(blank_lines)))
@@ -20,14 +20,14 @@ def get_documentation_metric(path):
 
 
 def get_tests_metric(path):
-    code_source, _, _ = utils.counterProject(path)
+    code_source, _, _ = utils.counter_project(path)
 
     code_test = 0
-    all_files = utils.getListOfFiles(path)
+    all_files = utils.get_list_of_files(path)
     _td = testFileDetector.TestDetector()
     test_files = list(filter(_td.test_search, all_files))
     for file in test_files:
-        _code, _, _ = utils.counterProject(file)
+        _code, _, _ = utils.counter_project(file)
         code_test += _code
 
     return (code_test / code_source) if (code_source) != 0 else 0
@@ -146,7 +146,7 @@ def get_metric_history(data):
 def get_metric_continuous_integration(path):
     list_ci_files = ["Jenkinsfile", ".travis.yml", ".circleci"]
 
-    files = utils.getListOfFiles(path)
+    files = utils.get_list_of_files(path)
 
     for file in files:
         for item in list_ci_files:
@@ -157,7 +157,7 @@ def get_metric_continuous_integration(path):
 
 
 def get_metric_license(path):
-    files = utils.getListOfFiles(path)
+    files = utils.get_list_of_files(path)
     for file in files:
         if file.find("LICENSE") != -1:
             return 1

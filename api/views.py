@@ -24,11 +24,7 @@ class GetAllRepositorys(APIView):
         """
         Return a list of repositories from the server database
         """
-        try:
-            repositories = models.Repository.objects.all()
-        except Exception as e:
-            print(e)
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+        repositories = models.Repository.objects.all()
         serializer = serializers.RepositoriesSerializer(repositories, many=True)
         return Response({"repositories": serializer.data})
 
@@ -66,17 +62,17 @@ class InsertRepository(CreateAPIView):
                 {"error": "owner or repository field do not should be null"}
             )
 
-        r = Retriever(owner=owner, repository=repository)
+        retriever = Retriever(owner=owner, repository=repository)
         try:
-            r.start()
+            retriever.start()
             repository_data = {
-                "repository_info": r.repository_info,
-                "commits": r.commits,
-                "issues": r.issues,
-                "pullrequests": r.pullrequests,
+                "repository_info": retriever.repository_info,
+                "commits": retriever.commits,
+                "issues": retriever.issues,
+                "pullrequests": retriever.pullrequests,
             }
 
-            p = Parser(
+            parser = Parser(
                 owner=owner,
                 repository=repository,
                 repository_info=repository_data["repository_info"],
@@ -84,7 +80,7 @@ class InsertRepository(CreateAPIView):
                 issues=repository_data["issues"],
                 pullrequests=repository_data["pullrequests"],
             )
-            p.start()
+            parser.start()
 
             return Response({"success": True})
         except Exception as e:

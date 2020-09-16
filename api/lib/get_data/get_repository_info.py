@@ -34,7 +34,7 @@ def getRepositoryInfo(owner, repository):
     aux = {k: v for k, v in sorted(aux.items(), key=lambda item: item[1])}
     main_language = list(aux.keys())[-1]
 
-    num_files = utils.getNumFiles(owner, repository)
+    num_files = utils.get_num_files(owner, repository)
 
     return {
         "owner_avatar_url": owner_avatar_url,
