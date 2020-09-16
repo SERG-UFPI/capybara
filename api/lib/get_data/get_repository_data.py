@@ -74,9 +74,9 @@ class Retriever:
         print("<== Pullrequests retrieved")
 
     def _clone_repository(self):
-        _dir = f"{BASE_DIR}/cloned_repositories/{self._owner}/{self._repository}"
+        _dir = f"{BASE_DIR}/cloned_repositories/{self._owner}"
 
-        if not os.path.exists(_dir):
+        if not os.path.exists(f"{_dir}/{self._repository}"):
             print("===> Cloning repository...")
             try:
                 if not os.path.exists(_dir):

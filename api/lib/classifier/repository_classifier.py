@@ -4,7 +4,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 
 
-def _loadClassifiers():
+def _load_classifiers():
     print(BASE_DIR)
     rf_org = None
     rf_utl = None
@@ -19,7 +19,7 @@ def _loadClassifiers():
 def run(metrics):
     item = [list(metrics.values())]
 
-    rf_org, rf_utl = _loadClassifiers()
+    rf_org, rf_utl = _load_classifiers()
 
     result_org = rf_org.predict(item)
     result_utl = rf_utl.predict(item)

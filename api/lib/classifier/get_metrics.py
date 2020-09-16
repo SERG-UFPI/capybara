@@ -9,9 +9,8 @@ from api.lib.test_file_detector import testFileDetector
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 
-def get_documentation_metric(path):
-    _, comment_lines, blank_lines = utils.counter_project(path)
-
+def get_documentation_metric(comment_lines, blank_lines):
+    print("-> Getting documentation metric")
     return (
         (float(comment_lines) / (float(comment_lines) + float(blank_lines)))
         if (comment_lines + blank_lines) != 0
@@ -19,9 +18,8 @@ def get_documentation_metric(path):
     )
 
 
-def get_tests_metric(path):
-    code_source, _, _ = utils.counter_project(path)
-
+def get_tests_metric(code_lines, path):
+    print("-> Getting tests metric")
     code_test = 0
     all_files = utils.get_list_of_files(path)
     _td = testFileDetector.TestDetector()
@@ -30,10 +28,11 @@ def get_tests_metric(path):
         _code, _, _ = utils.counter_project(file)
         code_test += _code
 
-    return (code_test / code_source) if (code_source) != 0 else 0
+    return (code_test / code_lines) if (code_lines) != 0 else 0
 
 
 def get_community_metric(commits):
+    print("-> Getting community metric")
     limiar_commits = int(0.8 * len(commits))
     commiters_commits = {}
 
@@ -121,6 +120,7 @@ def retrieve_issues(owner, repository):
 
 
 def get_metric_history(data):
+    print("-> Getting history metric")
     if len(data) == 0:
         return 0
 
@@ -144,6 +144,7 @@ def get_metric_history(data):
 
 
 def get_metric_continuous_integration(path):
+    print("-> Getting ci metric")
     list_ci_files = ["Jenkinsfile", ".travis.yml", ".circleci"]
 
     files = utils.get_list_of_files(path)
@@ -157,6 +158,7 @@ def get_metric_continuous_integration(path):
 
 
 def get_metric_license(path):
+    print("-> Getting license metric")
     files = utils.get_list_of_files(path)
     for file in files:
         if file.find("LICENSE") != -1:
@@ -167,11 +169,13 @@ def get_metric_license(path):
 def get_all_metrics(owner, repository):
     path = f"{BASE_DIR}/cloned_repositories/{owner}/{repository}/"
 
+    code_lines, comment_lines, blank_lines = utils.counter_project(path)
+
     if os.path.exists(path):
         commits = retrieve_commits(owner, repository)
         issues = retrieve_issues(owner, repository)
-        documentation_metric = get_documentation_metric(path)
-        tests_metric = get_tests_metric(path)
+        documentation_metric = get_documentation_metric(comment_lines, blank_lines)
+        tests_metric = get_tests_metric(code_lines, path)
         ci_metric = get_metric_continuous_integration(path)
         license_metric = get_metric_license(path)
         history_commits_metric = get_metric_history(data=commits)
