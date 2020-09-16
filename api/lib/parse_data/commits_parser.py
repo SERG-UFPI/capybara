@@ -54,6 +54,6 @@ def parse_commits(owner, repository, commits):
                 commit_serializer.save()
             else:
                 print(commit_serializer.errors)
-        except Exception as e:
+        except Exception as error:
             # print(e)
             pass

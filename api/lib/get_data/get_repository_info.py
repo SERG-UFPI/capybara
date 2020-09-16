@@ -2,10 +2,10 @@ from github import Github
 from api.lib import utils
 
 
-def getRepositoryInfo(owner, repository):
+def get_repository_info(owner, repository):
     _token = utils.get_best_token()
-    g = Github(_token)
-    repo = g.get_repo(f"{owner}/{repository}")
+    github = Github(_token)
+    repo = github.get_repo(f"{owner}/{repository}")
 
     owner_avatar_url = repo.owner.avatar_url
     fullname = repo.full_name

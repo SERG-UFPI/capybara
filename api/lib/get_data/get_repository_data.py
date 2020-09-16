@@ -40,7 +40,7 @@ class Retriever:
         print("===> Retrieving repository data...")
         self._clone_repository()
 
-        self.repository_info = get_repository_info.getRepositoryInfo(
+        self.repository_info = get_repository_info.get_repository_info(
             self._owner, self._repository
         )
 

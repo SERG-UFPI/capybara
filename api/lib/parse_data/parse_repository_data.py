@@ -19,18 +19,18 @@ class Parser:
         functions = [self.parse_commits, self.parse_issues, self.parse_pullrequests]
         _threads = [Thread(target=f) for f in functions]
 
-        for t in _threads:
-            t.start()
+        for thread in _threads:
+            thread.start()
 
-        for t in _threads:
-            t.join()
+        for thread in _threads:
+            thread.join()
 
     def insert_repository(self):
         print("==> Parsing repository...")
         try:
             repository_parser.parse_repositorys(self.repository_info)
-        except Exception as e:
-            print(f"Error on parse repository: {e}")
+        except Exception as error:
+            print(f"Error on parse repository: {error}")
         print("<== Repository parsed")
 
     def parse_commits(self):

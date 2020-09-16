@@ -11,7 +11,7 @@ def get_pullrequests(owner, repository):
     has_next = True
     cursor = None
     while 1:
-        query = querys.queryGetPullRequests(
+        query = querys.query_get_pullrequests(
             cursor, owner, repository, consts.LIMIT_QUERY_RESULT
         )
         init = time.time()

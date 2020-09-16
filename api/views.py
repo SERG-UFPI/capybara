@@ -83,8 +83,8 @@ class InsertRepository(CreateAPIView):
             parser.start()
 
             return Response({"success": True})
-        except Exception as e:
-            print(f"Error on retrieve {e}")
+        except Exception as error:
+            print(f"Error on retrieve {error}")
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -129,8 +129,8 @@ class GetRepositoryMetrics(CreateAPIView):
                     return Response(
                         {"metrics": utils.without_keys(metrics_data, ["repository"])}
                     )
-                except Exception as e:
-                    print(f"error: {e}")
+                except Exception as error:
+                    print(f"error: {error}")
                     return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         except models.Repository.DoesNotExist:
@@ -291,8 +291,8 @@ class LinkRepositoryUsersSimple(CreateAPIView):
         try:
             result = identification_link.run(owner, repository, "SIMPLE")
             return Response({"map_identification": result})
-        except Exception as e:
-            return Response(e, status=status.HTTP_404_NOT_FOUND)
+        except Exception as error:
+            return Response(error, status=status.HTTP_404_NOT_FOUND)
 
 
 class LinkRepositoryUsersBird(CreateAPIView):
@@ -314,7 +314,7 @@ class LinkRepositoryUsersBird(CreateAPIView):
         try:
             result = identification_link.run(owner, repository, "BIRD")
             return Response({"map_identification": result})
-        except Exception as e:
+        except Exception as error:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
 
