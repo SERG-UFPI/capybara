@@ -16,7 +16,7 @@ def get_pullrequests(owner, repository):
         )
         init = time.time()
         result = utils.run_query(query, tokens)
-        if not result:
+        if result:
             pullrequests += result["data"]["repository"]["pullRequests"]["nodes"]
             has_next = result["data"]["repository"]["pullRequests"]["pageInfo"][
                 "hasNextPage"

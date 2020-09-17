@@ -89,8 +89,10 @@ def query_get_pullrequests(cursor, owner, repository, limit):
           body
           changedFiles
           closedAt
-          comments {{
-            totalCount
+          comments(first: 100) {{
+            nodes {{
+              body
+            }}
           }}
           commits {{
             totalCount
@@ -147,9 +149,6 @@ def query_get_issues(cursor, owner, repository, limit):
       totalCount
       nodes {{
         activeLockReason
-        comments {{
-          totalCount
-        }}
         assignees (first: 10) {{
           nodes {{{user_info_query()}
           }}
@@ -169,6 +168,11 @@ def query_get_issues(cursor, owner, repository, limit):
         createdAt
         state
         locked
+        comments(first: 100) {{
+          nodes {{
+            body
+          }}
+        }}
         assignee: assignees (first: 1) {{
           nodes {{{user_info_query()}
           }}

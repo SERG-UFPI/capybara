@@ -116,5 +116,6 @@ dmypy.json
 
 cloned_repositories
 .env
+*.zip
 
 # End of https://www.gitignore.io/api/flask

@@ -1,7 +1,6 @@
 import os
 import tempfile
 from pathlib import Path
-from threading import Thread
 
 import git
 from perceval.backends.core.git import Git
@@ -16,75 +15,65 @@ class Retriever:
         self._owner = owner
         self._repository = repository
 
-    repository_info = None
-    commits = None
-    issues = None
-    pullrequests = None
+    # def start(self):
+    #     functions = [
+    #         self._get_repository_info,
+    #         self._get_commits,
+    #         self._get_issues,
+    #         self._get_pullrequests,
+    #     ]
+    #     _threads = [Thread(target=f) for f in functions]
 
-    def start(self):
-        functions = [
-            self._get_repository_info,
-            self._get_commits,
-            self._get_issues,
-            self._get_pullrequests,
-        ]
-        _threads = [Thread(target=f) for f in functions]
+    #     for thread in _threads:
+    #         thread.start()
 
-        for thread in _threads:
-            thread.start()
+    #     for thread in _threads:
+    #         thread.join()
 
-        for thread in _threads:
-            thread.join()
-
-    def _get_repository_info(self):
-        print("===> Retrieving repository data...")
+    def get_repository_info(self):
         self._clone_repository()
 
-        self.repository_info = get_repository_info.get_repository_info(
+        repository_info = get_repository_info.get_repository_info(
             self._owner, self._repository
         )
 
-        print("<== Repository data retrieved")
+        return repository_info
 
-    def _get_commits(self):
-        print("===> Retrieving commits...")
+    def get_commits(self):
+        print("==> Retrieving commits...")
         temp_dir = tempfile.TemporaryDirectory(dir=f"{BASE_DIR}")
-
-        try:
-            repo = Git(
-                f"https://github.com/{self._owner}/{self._repository}.git",
-                f"{temp_dir.name}/{self._owner}/{self._repository}",
-            )
-            self.commits = repo.fetch()
-            self.commits = [item["data"] for item in self.commits]
-        finally:
-            temp_dir.cleanup()
-            print("<== Commits retrieved")
-
-    def _get_issues(self):
-        print("===> Retrieving issues...")
-        self.issues = get_issues.get_issues(self._owner, self._repository)
-        print("<== Issues retrieved")
-
-    def _get_pullrequests(self):
-        print("===> Retrieving pullrequests...")
-        self.pullrequests = get_pullrequests.get_pullrequests(
-            self._owner, self._repository
+        repo = Git(
+            f"https://github.com/{self._owner}/{self._repository}.git",
+            f"{temp_dir.name}/{self._owner}/{self._repository}",
         )
-        print("<== Pullrequests retrieved")
+        commits = repo.fetch()
+        commits = [item["data"] for item in commits]
+
+        temp_dir.cleanup()
+        print("<== Commits retrieved")
+        return commits
+
+    def get_issues(self):
+        print("==> Retrieving issues...")
+        issues = get_issues.get_issues(self._owner, self._repository)
+        print("<== Issues retrieved")
+        return issues
+
+    def get_pullrequests(self):
+        print("==> Retrieving pullrequests...")
+        pullrequests = get_pullrequests.get_pullrequests(self._owner, self._repository)
+        print("==> PullRequests retrieved")
+        return pullrequests
 
     def _clone_repository(self):
+        print("==> Cloning repository...")
         _dir = f"{BASE_DIR}/cloned_repositories/{self._owner}"
 
         if not os.path.exists(f"{_dir}/{self._repository}"):
-            print("===> Cloning repository...")
-            try:
-                if not os.path.exists(_dir):
-                    os.makedirs(_dir)
+            if not os.path.exists(_dir):
+                os.makedirs(_dir)
 
-                git.Git(_dir).clone(
-                    f"https://github.com/{self._owner}/{self._repository}.git"
-                )
-                print("<== Repository cloned")
-            except Exception as error:
-                print(f"Error on clone repository: {error}")
+            git.Git(_dir).clone(
+                f"https://github.com/{self._owner}/{self._repository}.git"
+            )
+            print("==> Repository cloned")

@@ -9,9 +9,10 @@ from api.lib.classifier import commit_classifier
 def parse_commits(owner, repository, commits):
     repo = models.Repository.objects.get(owner=owner, repository=repository)
     for item in commits:
+        # print(item)
+        # print("-----------------------------------------------------")
         try:
             commit_attributes = {}
-
             classification = commit_classifier.run(item["message"])
             for key in classification:
                 commit_attributes[utils.to_camel_case(key)] = classification[key]
@@ -39,7 +40,6 @@ def parse_commits(owner, repository, commits):
                             ).timetuple()
                         )
                     )
-                    print(commit_attributes[utils.to_camel_case(key)])
                     continue
                 commit_attributes[utils.to_camel_case(key)] = item[key]
 
@@ -48,6 +48,10 @@ def parse_commits(owner, repository, commits):
             )
             if identification_serializer.is_valid():
                 identification_serializer.save()
+            else:
+                print(
+                    f"identification_serializer errors: {identification_serializer.errors}"
+                )
 
             commit_serializer = serializers.FullCommitSerializer(data=commit_attributes)
             if commit_serializer.is_valid():

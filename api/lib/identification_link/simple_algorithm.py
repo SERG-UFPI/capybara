@@ -11,16 +11,18 @@ def start_simple_algorithm(users):
 
 
 def simple_algorithm(_i):
-    return base_algorithm.run(_i=_i, shouldInclude=shouldInclude, p=0.3)
+    return base_algorithm.run(_i=_i, should_include=should_include, p=1.0)
 
 
-def shouldInclude(iMerge, i, p):
+def should_include(iMerge, i, p):
     check = False
-    for x in list(iMerge.values())[0]:
-        if i["normalized"] == x["normalized"]:
+    for x in iMerge:
+        i_normalized = i.get("normalized", None)
+        x_normalized = x.get("normalized", None)
+
+        if (i_normalized and x_normalized) and i_normalized == x_normalized:
             check = True
             break
-    if check and (len(i["normalized"]) > p):
+    if check and (len(i_normalized) > p):
         return True
-
     return False

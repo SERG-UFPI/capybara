@@ -11,12 +11,12 @@ def get_issues(owner, repository):
     has_next = True
     cursor = None
     while 1:
-        query = querys.queryGetIssues(
+        query = querys.query_get_issues(
             cursor, owner, repository, consts.LIMIT_QUERY_RESULT
         )
         init = time.time()
         result = utils.run_query(query, tokens)
-        if not result:
+        if result:
             issues += result["data"]["repository"]["issues"]["nodes"]
             has_next = result["data"]["repository"]["issues"]["pageInfo"]["hasNextPage"]
             cursor = result["data"]["repository"]["issues"]["pageInfo"]["endCursor"]

@@ -1,25 +1,70 @@
 from django.urls import path
 
-from . import views
+from api import views
 
 urlpatterns = [
-    path("insert/", views.InsertRepository.as_view()),
-    path("repositories/", views.GetAllRepositorys.as_view()),
+    path(
+        "insert/commits",
+        views.InsertCommits.as_view(),
+    ),
+    path(
+        "insert/repository",
+        views.InsertRepository.as_view(),
+    ),
+    path(
+        "insert/issues",
+        views.InsertIssues.as_view(),
+    ),
+    path(
+        "insert/pullrequests",
+        views.InsertPullRequests.as_view(),
+    ),
+    path(
+        "repositories/",
+        views.GetAllRepositorys.as_view(),
+    ),
     path(
         "repository/<str:owner>/<str:repository>", views.GetSingleRepository.as_view()
     ),
-    path("commits/<str:owner>/<str:repository>", views.GetRepositoryCommits.as_view()),
-    path("issues/<str:owner>/<str:repository>", views.GetRepositoryIssues.as_view()),
+    path(
+        "commits/<str:owner>/<str:repository>",
+        views.GetRepositoryCommits.as_view(),
+    ),
+    path(
+        "issues/<str:owner>/<str:repository>",
+        views.GetRepositoryIssues.as_view(),
+    ),
     path(
         "pullrequests/<str:owner>/<str:repository>",
         views.GetRepositoryPullRequests.as_view(),
     ),
-    path("metrics/", views.GetRepositoryMetrics.as_view()),
+    path(
+        "metrics/",
+        views.GetRepositoryMetrics.as_view(),
+    ),
     path(
         "classify/<str:owner>/<str:repository>",
         views.GetRepositoryClassification.as_view(),
     ),
-    path("link_ids/simple/", views.LinkRepositoryUsersSimple.as_view()),
-    path("link_ids/bird/", views.LinkRepositoryUsersBird.as_view()),
-    path("", views.Home.as_view(), name="home"),
+    path(
+        "link_ids/local/simple/",
+        views.LocalLinkRepositoryUsersSimple.as_view(),
+    ),
+    path(
+        "link_ids/local/bird/",
+        views.LocalLinkRepositoryUsersBird.as_view(),
+    ),
+    path(
+        "link_ids/local/improved/",
+        views.LocalLinkRepositoryUsersImproved.as_view(),
+    ),
+    path(
+        "download_repository/<str:owner>/<str:repository>",
+        views.DownloadSingleRepository.as_view(),
+    ),
+    path(
+        "",
+        views.Home.as_view(),
+        name="home",
+    ),
 ]

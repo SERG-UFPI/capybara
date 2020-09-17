@@ -71,7 +71,9 @@ class Issue(models.Model):
     authorAssociation = models.TextField(blank=True, null=True)
     key = models.IntegerField(blank=True, null=True)
     closedAt = models.IntegerField(blank=True, null=True)
-    comments = models.IntegerField(blank=True, null=True)
+    comments = ArrayField(
+        models.JSONField(blank=True, null=True), blank=True, null=True
+    )
     assignees = ArrayField(
         models.JSONField(blank=True, null=True), blank=True, null=True
     )
@@ -99,7 +101,9 @@ class PullRequest(models.Model):
     body = models.TextField(blank=True, null=True)
     changedFiles = models.IntegerField(blank=True, null=True)
     closedAt = models.IntegerField(blank=True, null=True)
-    comments = models.IntegerField(blank=True, null=True)
+    comments = ArrayField(
+        models.JSONField(blank=True, null=True), blank=True, null=True
+    )
     commits = models.IntegerField(blank=True, null=True)
     createdAt = models.IntegerField(blank=True, null=True)
     deletions = models.IntegerField(blank=True, null=True)
@@ -126,16 +130,23 @@ class PullRequest(models.Model):
 
 
 class Identification(models.Model):
+    unique_together = (("name", "email"),)
     name = models.TextField()
     email = models.TextField()
     repository = models.ForeignKey(Repository, on_delete=models.CASCADE)
 
 
-class MapIdentification(models.Model):
+class LocalMapIdentification(models.Model):
     group = models.IntegerField()
     identification = models.ForeignKey(Identification, on_delete=models.CASCADE)
     algorithm = models.TextField()
     repository = models.ForeignKey(Repository, on_delete=models.CASCADE)
+
+
+class GlobalMapIdentification(models.Model):
+    group = models.IntegerField()
+    identification = models.ForeignKey(Identification, on_delete=models.CASCADE)
+    algorithm = models.TextField()
 
 
 class Metrics(models.Model):

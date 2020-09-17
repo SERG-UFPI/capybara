@@ -1,8 +1,9 @@
+from pathlib import Path
 import datetime
+import zipfile
 import os
 import re
 import time
-from pathlib import Path
 
 import pydotenv
 import requests
@@ -207,3 +208,17 @@ def get_list_of_files(dir_name):
 
 def without_keys(dictionary, keys):
     return {x: dictionary[x] for x in dictionary if x not in keys}
+
+
+def zipdir(path, filename):
+    zipf = zipfile.ZipFile(f"{filename}.zip", "w", zipfile.ZIP_DEFLATED)
+
+    for dir_, _, files in os.walk(f"{BASE_DIR}/{path}"):
+        for file_name in files:
+            rel_dir = os.path.relpath(dir_, f"{BASE_DIR}/{path}")
+            try:
+                zipf.write(os.path.join(f"./{path}/" + rel_dir, file_name))
+            except Exception as error:
+                print(error)
+
+    zipf.close()

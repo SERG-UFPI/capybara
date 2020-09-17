@@ -1,4 +1,7 @@
+import os
+from pathlib import Path
 from django.views import generic
+from django.http import HttpResponse
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.generics import CreateAPIView
@@ -10,8 +13,10 @@ from api.lib import utils
 from api.lib.classifier import repository_classifier
 from api.lib.classifier.get_metrics import get_all_metrics
 from api.lib.get_data.get_repository_data import Retriever
-from api.lib.identification_link import identification_link
+from api.lib.identification_link import local_identification_link
 from api.lib.parse_data.parse_repository_data import Parser
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class Home(generic.TemplateView):
@@ -39,8 +44,10 @@ class GetSingleRepository(APIView):
             repository_retrieved = models.Repository.objects.get(
                 owner=owner, repository=repository
             )
-        except models.Repository.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        except models.Repository.DoesNotExist as error:
+            return Response(
+                data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
+            )
 
         serializer = serializers.FullRepositorySerializer(repository_retrieved)
         return Response(serializer.data)
@@ -50,7 +57,7 @@ class InsertRepository(CreateAPIView):
     serializer_class = serializers.RepositorySerializer
 
     @swagger_auto_schema(tags=["Endpoints"])
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         """
         Insert a new repository to server database
         """
@@ -63,28 +70,129 @@ class InsertRepository(CreateAPIView):
             )
 
         retriever = Retriever(owner=owner, repository=repository)
+        parser = Parser(
+            owner=owner,
+            repository=repository,
+        )
         try:
-            retriever.start()
-            repository_data = {
-                "repository_info": retriever.repository_info,
-                "commits": retriever.commits,
-                "issues": retriever.issues,
-                "pullrequests": retriever.pullrequests,
-            }
+            repository_info = retriever.get_repository_info()
 
-            parser = Parser(
-                owner=owner,
-                repository=repository,
-                repository_info=repository_data["repository_info"],
-                commits=repository_data["commits"],
-                issues=repository_data["issues"],
-                pullrequests=repository_data["pullrequests"],
-            )
-            parser.start()
+            parser.insert_repository(repository_info)
 
             return Response({"success": True})
         except Exception as error:
             print(f"Error on retrieve {error}")
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class InsertCommits(CreateAPIView):
+    serializer_class = serializers.RepositorySerializer
+
+    @swagger_auto_schema(tags=["Endpoints"])
+    def post(self, request, *args, **kwargs):
+        """
+        Insert a new repository to server database
+        """
+        owner = request.data.get("owner", None)
+        repository = request.data.get("repository", None)
+
+        if not owner or not repository:
+            return Response(
+                {"error": "owner or repository field do not should be null"}
+            )
+
+        try:
+            models.Repository.objects.get(owner=owner, repository=repository)
+
+            retriever = Retriever(owner=owner, repository=repository)
+            parser = Parser(
+                owner=owner,
+                repository=repository,
+            )
+            commits_info = retriever.get_commits()
+            parser.parse_commits(commits_info)
+
+            return Response({"success": True})
+
+        except models.Repository.DoesNotExist as error:
+            return Response(
+                data={"error": f"{error}"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except:
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class InsertIssues(CreateAPIView):
+    serializer_class = serializers.RepositorySerializer
+
+    @swagger_auto_schema(tags=["Endpoints"])
+    def post(self, request, *args, **kwargs):
+        """
+        Insert a new repository to server database
+        """
+        owner = request.data.get("owner", None)
+        repository = request.data.get("repository", None)
+
+        if not owner or not repository:
+            return Response(
+                {"error": "owner or repository field do not should be null"}
+            )
+
+        try:
+            models.Repository.objects.get(owner=owner, repository=repository)
+
+            retriever = Retriever(owner=owner, repository=repository)
+            parser = Parser(
+                owner=owner,
+                repository=repository,
+            )
+            issues_info = retriever.get_issues()
+            parser.parse_issues(issues_info)
+
+            return Response({"success": True})
+
+        except models.Repository.DoesNotExist as error:
+            return Response(
+                data={"error": f"{error}"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except:
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class InsertPullRequests(CreateAPIView):
+    serializer_class = serializers.RepositorySerializer
+
+    @swagger_auto_schema(tags=["Endpoints"])
+    def post(self, request, *args, **kwargs):
+        """
+        Insert a new repository to server database
+        """
+        owner = request.data.get("owner", None)
+        repository = request.data.get("repository", None)
+
+        if not owner or not repository:
+            return Response(
+                {"error": "owner or repository field do not should be null"}
+            )
+
+        try:
+            models.Repository.objects.get(owner=owner, repository=repository)
+
+            retriever = Retriever(owner=owner, repository=repository)
+            parser = Parser(
+                owner=owner,
+                repository=repository,
+            )
+            pullrequests_info = retriever.get_pullrequests()
+            parser.parse_pullrequests(pullrequests_info)
+
+            return Response({"success": True})
+
+        except models.Repository.DoesNotExist as error:
+            return Response(
+                data={"error": f"{error}"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except:
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -117,24 +225,20 @@ class GetRepositoryMetrics(CreateAPIView):
                 return Response(
                     {"metrics": utils.without_keys(serializer.data, ["repository"])}
                 )
-            else:
-                try:
-                    metrics_data = get_all_metrics(owner=owner, repository=repository)
-                    metrics_data["repository"] = repository_retrieved.pk
+            metrics_data = get_all_metrics(owner=owner, repository=repository)
+            metrics_data["repository"] = repository_retrieved.pk
 
-                    serializer = serializers.MetricsSerializer(data=metrics_data)
-                    if serializer.is_valid():
-                        serializer.save()
+            serializer = serializers.MetricsSerializer(data=metrics_data)
+            if serializer.is_valid():
+                serializer.save()
 
-                    return Response(
-                        {"metrics": utils.without_keys(metrics_data, ["repository"])}
-                    )
-                except Exception as error:
-                    print(f"error: {error}")
-                    return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        except models.Repository.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"metrics": utils.without_keys(metrics_data, ["repository"])}
+            )
+        except models.Repository.DoesNotExist as error:
+            return Response(
+                data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class GetRepositoryCommits(APIView):
@@ -160,8 +264,10 @@ class GetRepositoryCommits(APIView):
                     ],
                 }
             )
-        except models.Repository.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        except models.Repository.DoesNotExist as error:
+            return Response(
+                data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class GetRepositoryIssues(APIView):
@@ -187,8 +293,10 @@ class GetRepositoryIssues(APIView):
                     ],
                 }
             )
-        except models.Repository.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        except models.Repository.DoesNotExist as error:
+            return Response(
+                data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class GetRepositoryPullRequests(APIView):
@@ -216,8 +324,10 @@ class GetRepositoryPullRequests(APIView):
                     ],
                 }
             )
-        except models.Repository.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        except models.Repository.DoesNotExist as error:
+            return Response(
+                data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class GetRepositoryClassification(APIView):
@@ -244,8 +354,10 @@ class GetRepositoryClassification(APIView):
                     {"error": "no metrics found for this repository"},
                     status=status.HTTP_404_NOT_FOUND,
                 )
-        except models.Repository.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        except models.Repository.DoesNotExist as error:
+            return Response(
+                data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class GetRepositoryUsers(APIView):
@@ -268,15 +380,17 @@ class GetRepositoryUsers(APIView):
                     "pullrequests": pullrequests_retrieved,
                 }
             )
-        except models.Repository.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        except models.Repository.DoesNotExist as error:
+            return Response(
+                data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
+            )
 
 
-class LinkRepositoryUsersSimple(CreateAPIView):
+class LocalLinkRepositoryUsersSimple(CreateAPIView):
     serializer_class = serializers.RepositorySerializer
 
     @swagger_auto_schema(tags=["Endpoints"])
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         """
         Return a list of users with links from target repository
         """
@@ -289,17 +403,23 @@ class LinkRepositoryUsersSimple(CreateAPIView):
             )
 
         try:
-            result = identification_link.run(owner, repository, "SIMPLE")
+            result = local_identification_link.run(owner, repository, "SIMPLE")
             return Response({"map_identification": result})
-        except Exception as error:
-            return Response(error, status=status.HTTP_404_NOT_FOUND)
+        except (
+            models.Repository.DoesNotExist,
+            models.LocalMapIdentification.DoesNotExist,
+            models.Identification.DoesNotExist,
+        ) as error:
+            return Response(
+                status=status.HTTP_404_NOT_FOUND, data={"error": f"{error}"}
+            )
 
 
-class LinkRepositoryUsersBird(CreateAPIView):
+class LocalLinkRepositoryUsersBird(CreateAPIView):
     serializer_class = serializers.RepositorySerializer
 
     @swagger_auto_schema(tags=["Endpoints"])
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         """
         Return a list of users with links from target repository
         """
@@ -312,17 +432,67 @@ class LinkRepositoryUsersBird(CreateAPIView):
             )
 
         try:
-            result = identification_link.run(owner, repository, "BIRD")
+            result = local_identification_link.run(owner, repository, "BIRD")
             return Response({"map_identification": result})
-        except Exception as error:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        except (
+            models.Repository.DoesNotExist,
+            models.LocalMapIdentification.DoesNotExist,
+            models.Identification.DoesNotExist,
+        ) as error:
+            return Response(
+                status=status.HTTP_404_NOT_FOUND, data={"error": f"{error}"}
+            )
 
 
-# def download(request, path):
-#     file_path = os.path.join(settings.MEDIA_ROOT, path)
-#     if os.path.exists(file_path):
-#         with open(file_path, 'rb') as fh:
-#             response = HttpResponse(fh.read(), content_type="application/vnd.ms-excel")
-#             response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
-#             return response
-#     raise Http404
+class LocalLinkRepositoryUsersImproved(CreateAPIView):
+    serializer_class = serializers.RepositorySerializer
+
+    @swagger_auto_schema(tags=["Endpoints"])
+    def post(self, request, *args, **kwargs):
+        """
+        Return a list of users with links from target repository
+        """
+        owner = request.data.get("owner", None)
+        repository = request.data.get("repository", None)
+
+        if not owner or not repository:
+            return Response(
+                {"error": "owner or repository field do not should be null"}
+            )
+
+        try:
+            result = local_identification_link.run(owner, repository, "IMPROVED")
+            return Response({"map_identification": result})
+        except (
+            models.Repository.DoesNotExist,
+            models.LocalMapIdentification.DoesNotExist,
+            models.Identification.DoesNotExist,
+        ) as error:
+            return Response(
+                status=status.HTTP_404_NOT_FOUND, data={"error": f"{error}"}
+            )
+
+
+class DownloadSingleRepository(APIView):
+    @swagger_auto_schema(tags=["Endpoints"])
+    def get(self, request, owner, repository):
+        path = f"cloned_repositories/{owner}/{repository}"
+        print(f"{BASE_DIR}/{path}")
+        if os.path.exists(f"{BASE_DIR}/{path}"):
+            utils.zipdir(path, f"{owner}_{repository}")
+            with open(f"{BASE_DIR}/{owner}_{repository}.zip", "rb") as file:
+                response = HttpResponse(file.read(), content_type="application/zip")
+                response[
+                    "Content-Disposition"
+                ] = f"attachment; filename={owner}_{repository}.zip"
+                return response
+        return Response(
+            data={"error": "Repository matching query does not exist."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+# class GlobalLinkRepositoryUsers(CreateAPIView):
+#     @swagger_auto_schema(tags=["Endpoints"])
+#     def post(self, request):
+#         return identification_link.global_identification_link.run()

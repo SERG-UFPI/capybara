@@ -16,5 +16,4 @@ def parse_pullrequests(owner, repository, pullrequests):
             data=pullrequest_attributes
         )
         if pullrequest_serializer.is_valid():
-            print("pr is valid")
             pullrequest_serializer.save()
