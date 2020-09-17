@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
+import git
 from django.views import generic
 from django.http import HttpResponse
+from github import GithubException
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.generics import CreateAPIView
@@ -80,9 +82,25 @@ class InsertRepository(CreateAPIView):
             parser.insert_repository(repository_info)
 
             return Response({"success": True})
-        except Exception as error:
-            print(f"Error on retrieve {error}")
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except GithubException as error:
+            if error.status == 404:
+                return Response(
+                    data={
+                        "error": "The repository could not be found or it is probably marked as private"
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            return Response(
+                data={"error": error.data},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except git.GitError as error:
+            print(f"Error on clone {error}")
+            return Response(
+                data={"error": "The given repository can't be cloned"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        # except git.
 
 
 class InsertCommits(CreateAPIView):

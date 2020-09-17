@@ -31,11 +31,10 @@ class Retriever:
     #         thread.join()
 
     def get_repository_info(self):
-        self._clone_repository()
-
         repository_info = get_repository_info.get_repository_info(
             self._owner, self._repository
         )
+        self._clone_repository()
 
         return repository_info
 
