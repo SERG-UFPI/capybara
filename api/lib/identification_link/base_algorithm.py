@@ -1,15 +1,15 @@
-def run(shouldInclude, I, p):
+def run(should_include, _i, p):
     id_counter = 1
 
-    identityMerges = {}
-    while len(I) > 0:
-        iMerge = {id_counter: []}
-        iMerge[id_counter].append(I.pop(0))
-        for i in I:
-            if shouldInclude(iMerge, i, p):
-                iMerge[id_counter].append(i)
-                I.remove(i)
-        identityMerges.update(iMerge)
+    identity_merges = {}
+    while len(_i) > 0:
+        i_merge = {id_counter: []}
+        i_merge[id_counter].append(_i.pop(0))
+        for i in _i[:]:
+            if should_include(i_merge[id_counter], i, p):
+                i_merge[id_counter].append(i)
+                _i.remove(i)
+        identity_merges.update(i_merge)
         id_counter += 1
 
-    return identityMerges
+    return identity_merges

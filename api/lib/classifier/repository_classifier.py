@@ -1,19 +1,16 @@
-from sklearn.ensemble import RandomForestClassifier
-from pathlib import Path
 import pickle
-import json
-import os
+from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 
 
-def _loadClassifiers():
+def _load_classifiers():
     print(BASE_DIR)
     rf_org = None
     rf_utl = None
-    with open(f'{BASE_DIR}/rf_org.pkl', 'rb') as fid:
+    with open(f"{BASE_DIR}/rf_org.pkl", "rb") as fid:
         rf_org = pickle.load(fid)
-    with open(f'{BASE_DIR}/rf_utl.pkl', 'rb') as fid:
+    with open(f"{BASE_DIR}/rf_utl.pkl", "rb") as fid:
         rf_utl = pickle.load(fid)
 
     return rf_org, rf_utl
@@ -22,9 +19,9 @@ def _loadClassifiers():
 def run(metrics):
     item = [list(metrics.values())]
 
-    rf_org, rf_utl = _loadClassifiers()
+    rf_org, rf_utl = _load_classifiers()
 
     result_org = rf_org.predict(item)
     result_utl = rf_utl.predict(item)
 
-    return (not result_org[0] or not result_utl[0])
+    return not result_org[0] or not result_utl[0]

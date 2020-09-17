@@ -1,50 +1,42 @@
-from . import repository_parser, commits_parser, issues_parser, pullrequests_parser
 from threading import Thread
+
+from . import commits_parser, issues_parser, pullrequests_parser, repository_parser
 
 
 class Parser:
-    def __init__(self, owner, repository, repository_info, commits, issues, pullrequests):
+    def __init__(self, owner, repository):
         self._owner = owner
         self._repository = repository
-        self.repository_info = repository_info
-        self.commits = commits
-        self.issues = issues
-        self.pullrequests = pullrequests
 
-    def start(self):
-        self.insert_repository()
-        functions = [self.parse_commits,
-                     self.parse_issues, self.parse_pullrequests]
-        _threads = [Thread(target=f) for f in functions]
+    # def start(self):
+    #     self.insert_repository()
+    #     functions = [self.parse_commits, self.parse_issues, self.parse_pullrequests]
+    #     _threads = [Thread(target=f) for f in functions]
 
-        for t in _threads:
-            t.start()
+    #     for thread in _threads:
+    #         thread.start()
 
-        for t in _threads:
-            t.join()
+    #     for thread in _threads:
+    #         thread.join()
 
-    def insert_repository(self):
-        print('==> Parsing repository...')
-        try:
-            repository_parser.parseRepositorys(self.repository_info)
-        except Exception as e:
-            print(f'Error on parse repository: {e}')
-        print('<== Repository parsed')
+    def insert_repository(self, repository_info):
+        print("==> Parsing repository...")
+        repository_parser.parse_repositorys(repository_info)
+        print("<== Repository parsed")
 
-    def parse_commits(self):
-        print('==> Parsing commits...')
-        commits_parser.parseCommits(
-            self._owner, self._repository, self.commits)
-        print('<== Commits parsed')
+    def parse_commits(self, commits):
+        print("==> Parsing commits...")
+        commits_parser.parse_commits(self._owner, self._repository, commits)
+        print("<== Commits parsed")
 
-    def parse_issues(self):
-        print('==> Parsing issues...')
-        issues_parser.parseIssues(
-            self._owner, self._repository, self.issues)
-        print('<== Issues parsed')
+    def parse_issues(self, issues):
+        print("==> Parsing issues...")
+        issues_parser.parse_issues(self._owner, self._repository, issues)
+        print("<== Issues parsed")
 
-    def parse_pullrequests(self):
-        print('==> Parsing pullrequests...')
-        pullrequests_parser.parsePullRequests(
-            self._owner, self._repository, self.pullrequests)
-        print('<== PullRequests parsed')
+    def parse_pullrequests(self, pullrequests):
+        print("==> Parsing pullrequests...")
+        pullrequests_parser.parse_pullrequests(
+            self._owner, self._repository, pullrequests
+        )
+        print("<== PullRequests parsed")

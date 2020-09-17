@@ -1,15 +1,16 @@
-from pygount import SourceAnalysis, ProjectSummary
-from api.lib import consts
-from github import Github
 from pathlib import Path
-from glob import glob
 import datetime
-import pydotenv
-import requests
-import time
+import zipfile
 import os
 import re
+import time
 
+import pydotenv
+import requests
+from github import Github
+from pygount import ProjectSummary, SourceAnalysis
+
+from api.lib import consts
 
 global _numFiles
 
@@ -26,7 +27,7 @@ def get_best_token():
         g_temp = Github(token)
         try:
             rate_limiting = g_temp.rate_limiting[0]
-            if rate_limiting != None and rate_limiting > greatest_rate_limiting:
+            if rate_limiting is None and rate_limiting > greatest_rate_limiting:
                 greatest_rate_limiting = rate_limiting
                 token_with_greatest_rate_limiting = token
         except Exception:
@@ -36,31 +37,32 @@ def get_best_token():
 
 
 def get_tokens():
-    return [ENV.get(f'TOKEN_{x}')
-            for x in range(1, 9999) if ENV.get(f'TOKEN_{x}', None)]
+    return [
+        ENV.get(f"TOKEN_{x}") for x in range(1, 9999) if ENV.get(f"TOKEN_{x}", None)
+    ]
 
 
-def getNumFilesAux(path):
+def get_num_files_aux(path):
     global _numFiles
     contents = os.listdir(path)
 
     for content in contents:
-        content_path = path + '/' + content
+        content_path = path + "/" + content
 
         if os.path.isdir(content_path):
-            if (content == '.git'):
+            if content == ".git":
                 continue
             else:
-                getNumFilesAux(content_path)
+                get_num_files_aux(content_path)
         else:
             _numFiles += 1
 
 
-def getNumFiles(owner, repository):
+def get_num_files(owner, repository):
     global _numFiles
     _numFiles = 0
     # print(f"BASE DIR ====> {BASE_DIR}")
-    getNumFilesAux(f"{BASE_DIR}/cloned_repositories/{owner}/{repository}")
+    get_num_files_aux(f"{BASE_DIR}/cloned_repositories/{owner}/{repository}")
     return _numFiles
 
 
@@ -70,124 +72,153 @@ def run_query(query, tokens):
     for token in list_tokens[:]:
         try:
             _header = {"Authorization": f"Bearer {token}"}
-            request = requests.post(consts.BASE_URL, json={
-                                    'query': query}, headers=_header)
+            request = requests.post(
+                consts.BASE_URL, json={"query": query}, headers=_header
+            )
 
             if request.status_code == 200:
                 return request.json()
             else:
                 raise Exception(
-                    f"Query failed to run by returning code of {request.status_code}\nMessage: \"{request.content}\"")
-        except Exception as e:
-            print(e)
+                    f'Query failed to run by returning code of {request.status_code}\nMessage: "{request.content}"'
+                )
+        except Exception as error:
+            print(error)
             list_tokens.insert(-1, list_tokens.pop())
             continue
 
 
-def parseJson(file):
-    newList = []
+def parse_json(file):
+    new_list = []
     for item in file:
-        newList.append(parseJsonAux(item))
-    return newList
+        new_list.append(parse_json_aux(item))
+    return new_list
 
 
-def parseJsonAux(item):
-    newDict = {}
+def parse_json_aux(item):
+    new_dict = {}
     for key in item.keys():
         cc_key = key
         # print(f"====> item[{key}] ({item[key]}) is a {type(item[key])}")
         if type(item[key]) is dict:
             # print(f"====> item[{key}] ({item[key]}) is a dict")
             if list(item[key].keys()).count("nodes") > 0:
-                newDict[cc_key] = []
+                new_dict[cc_key] = []
                 for i in item[key]["nodes"]:
-                    newDict[cc_key].append(parseJsonAux(i))
+                    new_dict[cc_key].append(parse_json_aux(i))
             elif list(item[key].keys()).count("totalCount") > 0:
-                newDict[cc_key] = item[key]["totalCount"]
+                new_dict[cc_key] = item[key]["totalCount"]
             else:
-                newDict[cc_key] = parseJsonAux(item[key])
+                new_dict[cc_key] = parse_json_aux(item[key])
         else:
             if cc_key.find("At") != -1:
-                newDict[cc_key] = toTimestamp(item[key])
+                new_dict[cc_key] = to_timestamp(item[key])
             else:
-                newDict[cc_key] = item[key]
-    return newDict
+                new_dict[cc_key] = item[key]
+    return new_dict
 
 
-def toDate(timestamp):
-    return None if timestamp is None else time.strftime("%a %d %b %Y %H:%M:%S GMT", time.gmtime(float(timestamp) / 1000.0))
+def to_date(timestamp):
+    return (
+        None
+        if timestamp is None
+        else time.strftime(
+            "%a %d %b %Y %H:%M:%S GMT", time.gmtime(float(timestamp) / 1000.0)
+        )
+    )
 
 
-def toTimestamp(date):
-    return None if date is None else time.mktime(datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ").timetuple())
+def to_timestamp(date):
+    return (
+        None
+        if date is None
+        else time.mktime(
+            datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ").timetuple()
+        )
+    )
 
 
-def camelToSnake(s):
-    _underscorer1 = re.compile(r'(.)([A-Z][a-z]+)')
-    _underscorer2 = re.compile('([a-z0-9])([A-Z])')
-    subbed = _underscorer1.sub(r'\1_\2', s)
-    return _underscorer2.sub(r'\1_\2', subbed).lower()
+def camel_to_snake(str):
+    _underscorer1 = re.compile(r"(.)([A-Z][a-z]+)")
+    _underscorer2 = re.compile("([a-z0-9])([A-Z])")
+    subbed = _underscorer1.sub(r"\1_\2", str)
+    return _underscorer2.sub(r"\1_\2", subbed).lower()
 
 
-def toCamelCase(snake_str):
-    str = camelToSnake(snake_str)
-    components = str.split('_')
+def to_camel_case(snake_str):
+    str = camel_to_snake(snake_str)
+    components = str.split("_")
     if len(components) < 1:
         return components
         # We capitalize the first letter of each component except the first one
         # with the 'title' method and join them together.
-    return components[0].lower() + ''.join(x.title() for x in components[1:])
+    return components[0].lower() + "".join(x.title() for x in components[1:])
 
 
-def counterProject(path):
-    '''
+def counter_project(path):
+    """
     Returns:
         - Sum of code lines
         - Sum of documentation lines
         - Sum of empty lines
-    '''
-    ps = ProjectSummary()
+    """
+    project_summary = ProjectSummary()
 
     source_paths = None
 
     if os.path.isdir(path):
-        source_paths = getListOfFiles(path)
+        source_paths = get_list_of_files(path)
     else:
         source_paths = [path]
 
     for source_path in source_paths:
         try:
-            sa = SourceAnalysis.from_file(source_path, "pygount")
-            ps.add(sa)
-        except Exception as e:
+            source_analysis = SourceAnalysis.from_file(source_path, "pygount")
+            project_summary.add(source_analysis)
+        except Exception as error:
             # print(f'Error on analysis file: {source_path} => {e}')
             continue
 
     sum_code = 0
     sum_documentation = 0
     sum_empty = 0
-    for ls in ps.language_to_language_summary_map.values():
-        sum_code += ls.code_count
-        sum_documentation += ls.documentation_count
-        sum_empty += ls.empty_count
+    for language_summary in project_summary.language_to_language_summary_map.values():
+        sum_code += language_summary.code_count
+        sum_documentation += language_summary.documentation_count
+        sum_empty += language_summary.empty_count
 
     return sum_code, sum_documentation, sum_empty
 
 
-def getListOfFiles(dirName):
-    listOfFile = os.listdir(dirName)
-    allFiles = list()
+def get_list_of_files(dir_name):
+    list_of_files = os.listdir(dir_name)
+    all_files = list()
     # Iterate over all the entries
-    for entry in listOfFile:
+    for entry in list_of_files:
         # Create full path
-        fullPath = os.path.join(dirName, entry)
+        full_path = os.path.join(dir_name, entry)
         # If entry is a directory then get the list of files in this directory
-        if os.path.isdir(fullPath):
-            allFiles = allFiles + getListOfFiles(fullPath)
+        if os.path.isdir(full_path):
+            all_files = all_files + get_list_of_files(full_path)
         else:
-            allFiles.append(fullPath)
+            all_files.append(full_path)
 
-    return allFiles
+    return all_files
 
 
-def without_keys(d, keys): return {x: d[x] for x in d if x not in keys}
+def without_keys(dictionary, keys):
+    return {x: dictionary[x] for x in dictionary if x not in keys}
+
+
+def zipdir(path, filename):
+    zipf = zipfile.ZipFile(f"{filename}.zip", "w", zipfile.ZIP_DEFLATED)
+
+    for dir_, _, files in os.walk(f"{BASE_DIR}/{path}"):
+        for file_name in files:
+            rel_dir = os.path.relpath(dir_, f"{BASE_DIR}/{path}")
+            try:
+                zipf.write(os.path.join(f"./{path}/" + rel_dir, file_name))
+            except Exception as error:
+                print(error)
+
+    zipf.close()

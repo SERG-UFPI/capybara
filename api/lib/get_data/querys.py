@@ -1,4 +1,4 @@
-def userInfoQuery():
+def user_info_query():
     return """
         id
         login
@@ -32,7 +32,7 @@ def userInfoQuery():
         # }"""
 
 
-def labelInfoQuery():
+def label_info_query():
     return """
         color
         description
@@ -40,7 +40,7 @@ def labelInfoQuery():
         url"""
 
 
-def milestoneInfoQuery():
+def milestone_info_query():
     return """
       closed
       closedAt
@@ -62,8 +62,8 @@ def milestoneInfoQuery():
       url"""
 
 
-def queryGetPullRequests(cursor, owner, repository, limit):
-    _cursor = "null" if cursor is None else ("\"" + cursor + "\"")
+def query_get_pullrequests(cursor, owner, repository, limit):
+    _cursor = "null" if cursor is None else ('"' + cursor + '"')
     return f"""
 {{
   repository(owner: "{owner}", name: "{repository}") {{
@@ -73,11 +73,11 @@ def queryGetPullRequests(cursor, owner, repository, limit):
           activeLockReason
           additions
           assignee: assignees (first: 1) {{
-            nodes {{{userInfoQuery()}
+            nodes {{{user_info_query()}
             }}
           }}
           assignees (first: 10) {{
-            nodes {{{userInfoQuery()}
+            nodes {{{user_info_query()}
             }}
           }} 
           authorAssociation
@@ -89,8 +89,10 @@ def queryGetPullRequests(cursor, owner, repository, limit):
           body
           changedFiles
           closedAt
-          comments {{
-            totalCount
+          comments(first: 100) {{
+            nodes {{
+              body
+            }}
           }}
           commits {{
             totalCount
@@ -101,7 +103,7 @@ def queryGetPullRequests(cursor, owner, repository, limit):
           headRefOid
           headRefName
           labels (first: 10) {{
-            nodes {{{labelInfoQuery()}
+            nodes {{{label_info_query()}
             }}
           }}
           locked
@@ -113,10 +115,10 @@ def queryGetPullRequests(cursor, owner, repository, limit):
           merged
           mergedAt
           mergedBy {{
-            ... on User {{{userInfoQuery()}
+            ... on User {{{user_info_query()}
             }}
           }}
-          milestone {{{milestoneInfoQuery()}
+          milestone {{{milestone_info_query()}
           }}
           id
           number
@@ -125,7 +127,7 @@ def queryGetPullRequests(cursor, owner, repository, limit):
           updatedAt
           url
           author {{
-            ... on User {{{userInfoQuery()}
+            ... on User {{{user_info_query()}
             }}
           }}
         }}
@@ -138,8 +140,8 @@ def queryGetPullRequests(cursor, owner, repository, limit):
 }}"""
 
 
-def queryGetIssues(cursor, owner, repository, limit):
-    _cursor = "null" if cursor is None else ("\"" + cursor + "\"")
+def query_get_issues(cursor, owner, repository, limit):
+    _cursor = "null" if cursor is None else ('"' + cursor + '"')
     return f"""
 {{
   repository(owner: "{owner}", name: "{repository}") {{
@@ -147,15 +149,12 @@ def queryGetIssues(cursor, owner, repository, limit):
       totalCount
       nodes {{
         activeLockReason
-        comments {{
-          totalCount
-        }}
         assignees (first: 10) {{
-          nodes {{{userInfoQuery()}
+          nodes {{{user_info_query()}
           }}
         }}
         # pull_request: url
-        milestone{{{milestoneInfoQuery()}
+        milestone{{{milestone_info_query()}
         }}
         reactions (first: 100) {{
           nodes {{
@@ -169,19 +168,24 @@ def queryGetIssues(cursor, owner, repository, limit):
         createdAt
         state
         locked
+        comments(first: 100) {{
+          nodes {{
+            body
+          }}
+        }}
         assignee: assignees (first: 1) {{
-          nodes {{{userInfoQuery()}
+          nodes {{{user_info_query()}
           }}
         }}
         id
         number
         title
         labels (first: 10) {{
-          nodes {{{labelInfoQuery()}
+          nodes {{{label_info_query()}
           }}
         }}
         author {{
-          ... on User{{{userInfoQuery()}
+          ... on User{{{user_info_query()}
           }}
         }}
       }}
