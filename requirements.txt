@@ -5,7 +5,7 @@ drf-yasg
 markdown
 psycopg2-binary
 pydotenv
-gitpython
+pygit2
 pygithub
 pygount
 scikit-learn

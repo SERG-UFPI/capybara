@@ -1,10 +1,10 @@
 import os
+import pygit2
 import tempfile
 from pathlib import Path
-
-import git
 from perceval.backends.core.git import Git
 
+from .. import utils
 from . import get_issues, get_pullrequests, get_repository_info
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
@@ -31,10 +31,10 @@ class Retriever:
     #         thread.join()
 
     def get_repository_info(self):
+        self._clone_repository()
         repository_info = get_repository_info.get_repository_info(
             self._owner, self._repository
         )
-        self._clone_repository()
 
         return repository_info
 
@@ -66,13 +66,16 @@ class Retriever:
 
     def _clone_repository(self):
         print("==> Cloning repository...")
-        _dir = f"{BASE_DIR}/cloned_repositories/{self._owner}"
+        _dir = f"{BASE_DIR}/cloned_repositories/{self._owner}/{self._owner}"
 
-        if not os.path.exists(f"{_dir}/{self._repository}"):
+        if not os.path.exists(f"{_dir}"):
             if not os.path.exists(_dir):
                 os.makedirs(_dir)
 
-            git.Git(_dir).clone(
-                f"https://github.com/{self._owner}/{self._repository}.git"
-            )
+            _token = utils.get_best_token()
+            callbacks = pygit2.RemoteCallbacks(pygit2.UserPass(_token, "x-oauth-basic"))
+            pygit2.clone_repository(
+                f"https://github.com/{self._owner}/{self._owner}.git",
+                _dir,
+                callbacks=callbacks)
             print("==> Repository cloned")
