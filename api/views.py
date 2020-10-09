@@ -33,7 +33,9 @@ class GetAllRepositorys(APIView):
         """
         repositories = models.Repository.objects.all()
         serializer = serializers.RepositoriesSerializer(repositories, many=True)
-        return Response({"repositories": serializer.data})
+        return Response({
+            "totalCount": len(serializer.data),
+            "repositories": serializer.data})
 
 
 class GetSingleRepository(APIView):
@@ -376,6 +378,20 @@ class GetRepositoryClassification(APIView):
             return Response(
                 data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
             )
+
+
+class GetGlobalUsers(APIView):
+    @swagger_auto_schema(tags=["Endpoints"])
+    def get(self, request):
+        """
+        Return a list of users from all repositories
+        """
+
+        users_retrieved = models.Identification.objects.all()
+        serializer = serializers.FullIdentificationSerializer(
+            users_retrieved, many=True
+        )
+        return Response({"users": serializer.data})
 
 
 class GetRepositoryUsers(APIView):

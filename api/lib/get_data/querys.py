@@ -67,7 +67,7 @@ def query_get_pullrequests(cursor, owner, repository, limit):
     return f"""
 {{
   repository(owner: "{owner}", name: "{repository}") {{
-    pullRequests(first: {80}, after: {_cursor}) {{
+    pullRequests(first: {limit}, after: {_cursor}) {{
         totalCount
         nodes {{
           activeLockReason

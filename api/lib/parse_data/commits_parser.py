@@ -56,8 +56,6 @@ def parse_commits(owner, repository, commits):
             commit_serializer = serializers.FullCommitSerializer(data=commit_attributes)
             if commit_serializer.is_valid():
                 commit_serializer.save()
-            else:
-                print(commit_serializer.errors)
         except Exception as error:
             # print(e)
             pass

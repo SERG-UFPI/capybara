@@ -1,7 +1,7 @@
 import os
-import pygit2
 import tempfile
 from pathlib import Path
+import pygit2
 from perceval.backends.core.git import Git
 
 from .. import utils
@@ -77,5 +77,6 @@ class Retriever:
             pygit2.clone_repository(
                 f"https://github.com/{self._owner}/{self._owner}.git",
                 _dir,
-                callbacks=callbacks)
+                callbacks=callbacks,
+            )
             print("==> Repository cloned")

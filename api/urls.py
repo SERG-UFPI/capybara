@@ -63,6 +63,14 @@ urlpatterns = [
         views.DownloadSingleRepository.as_view(),
     ),
     path(
+        "get_repository_users/<str:owner>/<str:repository>",
+        views.GetRepositoryUsers.as_view(),
+    ),
+    path(
+        "get_all_users",
+        views.GetGlobalUsers.as_view(),
+    ),
+    path(
         "",
         views.Home.as_view(),
         name="home",
