@@ -40,7 +40,7 @@ class Retriever:
 
     def get_commits(self):
         print("==> Retrieving commits...")
-        temp_dir = tempfile.TemporaryDirectory(dir=f"{BASE_DIR}")
+        temp_dir = tempfile.TemporaryDirectory(dir=f"{BASE_DIR}/temp_repositories")
         repo = Git(
             f"https://github.com/{self._owner}/{self._repository}.git",
             f"{temp_dir.name}/{self._owner}/{self._repository}",

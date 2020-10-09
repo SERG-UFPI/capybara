@@ -119,4 +119,5 @@ cloned_repositories
 *.zip
 ngrok
 
+temp_repositories/
 # End of https://www.gitignore.io/api/flask
