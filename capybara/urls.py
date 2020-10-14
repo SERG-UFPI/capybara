@@ -20,16 +20,20 @@ from drf_yasg import openapi
 
 
 SchemaView = get_schema_view(
-   openapi.Info(
-      title="Capybara API",
-      default_version='v1',
-      description="API developed for TCC and ICV - UFPI",
-   ),
-   public=True,
+    openapi.Info(
+        title="Capybara API",
+        default_version="v1",
+        description="API developed for TCC and ICV - UFPI",
+    ),
+    public=True,
 )
 
 urlpatterns = [
-    url(r'^doc/$', SchemaView.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    # path('admin/', admin.site.urls),
-    path('', include('api.urls')),
+    url(
+        r"^doc/$",
+        SchemaView.with_ui("swagger", cache_timeout=0),
+        name="schema-swagger-ui",
+    ),
+    # path("admin/", admin.site.urls),
+    path("", include("api.urls")),
 ]

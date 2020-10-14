@@ -120,4 +120,5 @@ cloned_repositories
 ngrok
 
 temp_repositories/
+.vscode
 # End of https://www.gitignore.io/api/flask

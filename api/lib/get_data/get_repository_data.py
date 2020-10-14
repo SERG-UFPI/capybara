@@ -31,7 +31,11 @@ class Retriever:
     #         thread.join()
 
     def get_repository_info(self):
-        self._clone_repository()
+        _dir = f"{BASE_DIR}/cloned_repositories/{self._owner}/{self._repository}"
+
+        if not os.path.exists(_dir):
+            raise Exception("Repository hasn't been cloned yet")
+
         repository_info = get_repository_info.get_repository_info(
             self._owner, self._repository
         )
@@ -40,7 +44,10 @@ class Retriever:
 
     def get_commits(self):
         print("==> Retrieving commits...")
-        temp_dir = tempfile.TemporaryDirectory(dir=f"{BASE_DIR}/temp_repositories")
+        _dir = f"{BASE_DIR}/temp_repositories"
+        if not os.path.exists(_dir):
+            os.makedirs(_dir)
+        temp_dir = tempfile.TemporaryDirectory(dir=_dir)
         repo = Git(
             f"https://github.com/{self._owner}/{self._repository}.git",
             f"{temp_dir.name}/{self._owner}/{self._repository}",
@@ -64,19 +71,18 @@ class Retriever:
         print("==> PullRequests retrieved")
         return pullrequests
 
-    def _clone_repository(self):
+    def clone_repository(self):
         print("==> Cloning repository...")
-        _dir = f"{BASE_DIR}/cloned_repositories/{self._owner}/{self._owner}"
+        _dir = f"{BASE_DIR}/cloned_repositories/{self._owner}/{self._repository}"
 
-        if not os.path.exists(f"{_dir}"):
-            if not os.path.exists(_dir):
-                os.makedirs(_dir)
+        if not os.path.exists(_dir):
+            os.makedirs(_dir)
 
-            _token = utils.get_best_token()
-            callbacks = pygit2.RemoteCallbacks(pygit2.UserPass(_token, "x-oauth-basic"))
-            pygit2.clone_repository(
-                f"https://github.com/{self._owner}/{self._owner}.git",
-                _dir,
-                callbacks=callbacks,
-            )
-            print("==> Repository cloned")
+        _token = utils.get_best_token()
+        callbacks = pygit2.RemoteCallbacks(pygit2.UserPass(_token, "x-oauth-basic"))
+        pygit2.clone_repository(
+            f"https://github.com/{self._owner}/{self._repository}.git",
+            _dir,
+            callbacks=callbacks,
+        )
+        print("==> Repository cloned")

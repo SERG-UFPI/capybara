@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-import git
+import pygit2
 from django.views import generic
 from django.http import HttpResponse
 from github import GithubException
@@ -33,9 +33,9 @@ class GetAllRepositorys(APIView):
         """
         repositories = models.Repository.objects.all()
         serializer = serializers.RepositoriesSerializer(repositories, many=True)
-        return Response({
-            "totalCount": len(serializer.data),
-            "repositories": serializer.data})
+        return Response(
+            {"totalCount": len(serializer.data), "repositories": serializer.data}
+        )
 
 
 class GetSingleRepository(APIView):
@@ -84,6 +84,51 @@ class InsertRepository(CreateAPIView):
             parser.insert_repository(repository_info)
 
             return Response({"success": True})
+        except Exception as error:
+            return Response(
+                data={"error": str(error)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class DeleteAllRepositories(CreateAPIView):
+    @swagger_auto_schema(tags=["Endpoints"])
+    def post(self, request, *args, **kwargs):
+        """
+        Delete all repositories from the server database
+        """
+        models.LocalMapIdentification.objects.all().delete()
+        models.GlobalMapIdentification.objects.all().delete()
+        models.Identification.objects.all().delete()
+        models.Metrics.objects.all().delete()
+        models.PullRequest.objects.all().delete()
+        models.Issue.objects.all().delete()
+        models.Commit.objects.all().delete()
+        models.Repository.objects.all().delete()
+        return Response({"success": True})
+
+
+class CloneRepository(CreateAPIView):
+    serializer_class = serializers.RepositorySerializer
+
+    @swagger_auto_schema(tags=["Endpoints"])
+    def post(self, request, *args, **kwargs):
+        """
+        Clone a new repository to server database
+        """
+        owner = request.data.get("owner", None)
+        repository = request.data.get("repository", None)
+
+        if not owner or not repository:
+            return Response(
+                {"error": "owner or repository field do not should be null"}
+            )
+
+        retriever = Retriever(owner=owner, repository=repository)
+
+        try:
+            retriever.clone_repository()
+            return Response({"success": True})
         except GithubException as error:
             if error.status == 404:
                 return Response(
@@ -96,13 +141,17 @@ class InsertRepository(CreateAPIView):
                 data={"error": error.data},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        except git.GitError as error:
+        except pygit2.GitError as error:
             print(f"Error on clone {error}")
             return Response(
                 data={"error": "The given repository can't be cloned"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        # except git.
+        except Exception as error:
+            return Response(
+                data={"error": str(error)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class InsertCommits(CreateAPIView):
@@ -138,8 +187,10 @@ class InsertCommits(CreateAPIView):
             return Response(
                 data={"error": f"{error}"}, status=status.HTTP_404_NOT_FOUND
             )
-        except:
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as error:
+            return Response(
+                data=str(error), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class InsertIssues(CreateAPIView):

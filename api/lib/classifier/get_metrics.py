@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from pathlib import Path
+import time
 
 from api import models
 from api.lib import utils
@@ -167,9 +168,12 @@ def get_metric_license(path):
 
 
 def get_all_metrics(owner, repository):
+    init = time.time()
     path = f"{BASE_DIR}/cloned_repositories/{owner}/{repository}/"
 
     code_lines, comment_lines, blank_lines = utils.counter_project(path)
+
+    print(f"## Time to count => {(time.time() - init)/60} minutes")
 
     if os.path.exists(path):
         commits = retrieve_commits(owner, repository)
