@@ -78,11 +78,11 @@ class Retriever:
         if not os.path.exists(_dir):
             os.makedirs(_dir)
 
-        _token = utils.get_best_token()
-        callbacks = pygit2.RemoteCallbacks(pygit2.UserPass(_token, "x-oauth-basic"))
-        pygit2.clone_repository(
-            f"https://github.com/{self._owner}/{self._repository}.git",
-            _dir,
-            callbacks=callbacks,
-        )
+            _token = utils.get_best_token()
+            callbacks = pygit2.RemoteCallbacks(pygit2.UserPass(_token, "x-oauth-basic"))
+            pygit2.clone_repository(
+                f"https://github.com/{self._owner}/{self._repository}.git",
+                _dir,
+                callbacks=callbacks,
+            )
         print("==> Repository cloned")

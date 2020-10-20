@@ -62,6 +62,44 @@ def milestone_info_query():
       url"""
 
 
+def query_get_repository(owner, repository):
+    return f"""
+{{
+  repository(owner: "{owner}", name: "{repository}") {{
+    createdAt
+    owner {{
+      avatarUrl
+    }}
+    nameWithOwner
+    url
+    defaultBranchRef {{
+      name
+    }}
+    description
+    isFork
+    forkCount
+    homepageUrl
+    primaryLanguage {{
+      name
+    }}
+    name
+    issues(states: OPEN) {{
+      totalCount
+    }}
+    pushedAt
+    isArchived
+    stargazerCount
+    updatedAt
+    watchers {{
+      totalCount
+    }}
+    hasWikiEnabled
+    diskUsage
+  }}
+}}
+"""
+
+
 def query_get_pullrequests(cursor, owner, repository, limit):
     _cursor = "null" if cursor is None else ('"' + cursor + '"')
     return f"""

@@ -7,7 +7,7 @@ import time
 
 import pydotenv
 import requests
-from github import Github
+from github import Github, RateLimitExceededException
 from pygount import ProjectSummary, SourceAnalysis
 
 from api.lib import consts
@@ -30,7 +30,7 @@ def get_best_token():
             if rate_limiting is None and rate_limiting > greatest_rate_limiting:
                 greatest_rate_limiting = rate_limiting
                 token_with_greatest_rate_limiting = token
-        except Exception:
+        except RateLimitExceededException:
             continue
 
     return token_with_greatest_rate_limiting
@@ -60,10 +60,14 @@ def get_num_files_aux(path):
 
 def get_num_files(owner, repository):
     global _numFiles
-    _numFiles = 0
-    # print(f"BASE DIR ====> {BASE_DIR}")
-    get_num_files_aux(f"{BASE_DIR}/cloned_repositories/{owner}/{repository}")
-    return _numFiles
+    _dir = f"{BASE_DIR}/cloned_repositories/{owner}/{repository}"
+
+    if os.path.exists(_dir):
+        _numFiles = 0
+        get_num_files_aux(_dir)
+        return _numFiles
+
+    return None
 
 
 def run_query(query, tokens):
@@ -78,10 +82,10 @@ def run_query(query, tokens):
 
             if request.status_code == 200:
                 return request.json()
-            else:
-                raise Exception(
-                    f'Query failed to run by returning code of {request.status_code}\nMessage: "{request.content}"'
-                )
+
+            raise Exception(
+                f'Query failed to run by returning code of {request.status_code}\nMessage: "{request.content}"'
+            )
         except Exception as error:
             print(error)
             list_tokens.insert(-1, list_tokens.pop())

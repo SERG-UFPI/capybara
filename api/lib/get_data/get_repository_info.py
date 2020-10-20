@@ -1,64 +1,47 @@
-from github import Github
+from github import RateLimitExceededException
 from api.lib import utils
+from . import querys
 
 
 def get_repository_info(owner, repository):
-    _token = utils.get_best_token()
-    github = Github(_token)
-    repo = github.get_repo(f"{owner}/{repository}")
+    tokens = utils.get_tokens()
+    repository_data = None
+    query = querys.query_get_repository(owner, repository)
+    result = utils.run_query(query, tokens)
 
-    owner_avatar_url = repo.owner.avatar_url
-    fullname = repo.full_name
-    clone_url = repo.clone_url
-    created_at = repo.created_at.timestamp()
-    default_branch = repo.default_branch
-    description = repo.description
-    fork = repo.fork
-    forks_count = repo.forks_count
-    homepage = repo.homepage
-    language = repo.language
-    name = repo.name
-    open_issues = repo.open_issues
-    pushed_at = repo.pushed_at.timestamp()
-    archived = repo.archived
-    stargazers_count = repo.stargazers_count
-    updated_at = repo.updated_at.timestamp()
-    watchers_count = repo.watchers_count
-    has_wiki = repo.has_wiki
-    # num_authors = repo.get_collaborators().totalCount
-    subscribers_count = repo.subscribers_count
-    size = repo.size
+    if result:
+        if not result.get("data", None):
+            raise RateLimitExceededException
 
-    # A linguagem com o maior número de linhas de código será a main_language
-    aux = repo.get_languages()
-    aux = {k: v for k, v in sorted(aux.items(), key=lambda item: item[1])}
-    main_language = list(aux.keys())[-1]
+        repository_data = result["data"]["repository"]
 
-    num_files = utils.get_num_files(owner, repository)
+        repository_data = utils.parse_json([repository_data])[0]
 
-    return {
-        "owner_avatar_url": owner_avatar_url,
-        "owner": owner,
-        "repository": repository,
-        "has_wiki": has_wiki,
-        "fullname": fullname,
-        "clone_url": clone_url,
-        "created_at": created_at,
-        "default_branch": default_branch,
-        "description": description,
-        "fork": fork,
-        "forks_count": forks_count,
-        "homepage": homepage,
-        "language": language,
-        "main_language": main_language,
-        "name": name,
-        "open_issues": open_issues,
-        "pushed_at": pushed_at,
-        "stargazers_count": stargazers_count,
-        "updated_at": updated_at,
-        "watchers_count": watchers_count,
-        "subscribers_count": subscribers_count,
-        "archived": archived,
-        "num_files": num_files,
-        "size": size,
-    }
+        num_files = utils.get_num_files(owner, repository)
+        print(repository_data)
+        return {
+            "owner_avatar_url": repository_data["owner"]["avatarUrl"],
+            "owner": owner,
+            "repository": repository,
+            "has_wiki": repository_data["hasWikiEnabled"],
+            "fullname": repository_data["nameWithOwner"],
+            "clone_url": repository_data["url"],
+            "created_at": repository_data["createdAt"],
+            "default_branch": repository_data["defaultBranchRef"]["name"],
+            "description": repository_data["description"],
+            "fork": repository_data["isFork"],
+            "forks_count": repository_data["forkCount"],
+            "homepage": repository_data["homepageUrl"],
+            "language": repository_data["primaryLanguage"]["name"],
+            "main_language": repository_data["primaryLanguage"]["name"],
+            "name": repository_data["name"],
+            "open_issues": repository_data["issues"],
+            "pushed_at": repository_data["pushedAt"],
+            "stargazers_count": repository_data["stargazerCount"],
+            "updated_at": repository_data["updatedAt"],
+            "watchers_count": repository_data["watchers"],
+            "subscribers_count": None,
+            "archived": repository_data["isArchived"],
+            "num_files": num_files,
+            "size": repository_data["diskUsage"],
+        }

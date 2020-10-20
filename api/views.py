@@ -1,15 +1,19 @@
 import os
 from pathlib import Path
 import pygit2
+import traceback
+import requests
+from github import RateLimitExceededException
 from django.views import generic
 from django.http import HttpResponse
 from github import GithubException
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, DestroyAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from api.lib.feeback_to_admin import send_feedback
 from api import models, serializers
 from api.lib import utils
 from api.lib.classifier import repository_classifier
@@ -26,7 +30,7 @@ class Home(generic.TemplateView):
 
 
 class GetAllRepositorys(APIView):
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Retrieve"])
     def get(self, request):
         """
         Return a list of repositories from the server database
@@ -39,7 +43,7 @@ class GetAllRepositorys(APIView):
 
 
 class GetSingleRepository(APIView):
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Retrieve"])
     def get(self, request, owner, repository):
         """
         Return repository detailed information
@@ -49,6 +53,7 @@ class GetSingleRepository(APIView):
                 owner=owner, repository=repository
             )
         except models.Repository.DoesNotExist as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
             )
@@ -60,7 +65,7 @@ class GetSingleRepository(APIView):
 class InsertRepository(CreateAPIView):
     serializer_class = serializers.RepositorySerializer
 
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Insert"])
     def post(self, request, *args, **kwargs):
         """
         Insert a new repository to server database
@@ -73,6 +78,13 @@ class InsertRepository(CreateAPIView):
                 {"error": "owner or repository field do not should be null"}
             )
 
+        repository_retrieved = models.Repository.objects.filter(
+            owner=owner, repository=repository
+        )
+
+        if list(repository_retrieved):
+            return Response({"success": True})
+
         retriever = Retriever(owner=owner, repository=repository)
         parser = Parser(
             owner=owner,
@@ -84,16 +96,27 @@ class InsertRepository(CreateAPIView):
             parser.insert_repository(repository_info)
 
             return Response({"success": True})
-        except Exception as error:
+        except RateLimitExceededException as error:
+            send_feedback.send(f"Error {error}")
+            traceback.print_exc()
+
+            # print(self.request.url)
+            # requests.post(self.request.url, data=self.request.data)
             return Response(
-                data={"error": str(error)},
+                data={"error": "Internal error. Try again"},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+        except Exception as error:
+            send_feedback.send(f"Error {error}")
+            return Response(
+                data={"error": "Unexpected error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 
-class DeleteAllRepositories(CreateAPIView):
-    @swagger_auto_schema(tags=["Endpoints"])
-    def post(self, request, *args, **kwargs):
+class DeleteAllRepositories(DestroyAPIView):
+    @swagger_auto_schema(tags=["Delete"])
+    def delete(self, request, *args, **kwargs):
         """
         Delete all repositories from the server database
         """
@@ -111,7 +134,7 @@ class DeleteAllRepositories(CreateAPIView):
 class CloneRepository(CreateAPIView):
     serializer_class = serializers.RepositorySerializer
 
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Insert"])
     def post(self, request, *args, **kwargs):
         """
         Clone a new repository to server database
@@ -130,6 +153,7 @@ class CloneRepository(CreateAPIView):
             retriever.clone_repository()
             return Response({"success": True})
         except GithubException as error:
+            send_feedback.send(f"Error {error}")
             if error.status == 404:
                 return Response(
                     data={
@@ -142,12 +166,14 @@ class CloneRepository(CreateAPIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         except pygit2.GitError as error:
+            send_feedback.send(f"Error {error}")
             print(f"Error on clone {error}")
             return Response(
                 data={"error": "The given repository can't be cloned"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         except Exception as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 data={"error": str(error)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -157,7 +183,7 @@ class CloneRepository(CreateAPIView):
 class InsertCommits(CreateAPIView):
     serializer_class = serializers.RepositorySerializer
 
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Insert"])
     def post(self, request, *args, **kwargs):
         """
         Insert a new repository to server database
@@ -184,10 +210,12 @@ class InsertCommits(CreateAPIView):
             return Response({"success": True})
 
         except models.Repository.DoesNotExist as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 data={"error": f"{error}"}, status=status.HTTP_404_NOT_FOUND
             )
         except Exception as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 data=str(error), status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
@@ -196,7 +224,7 @@ class InsertCommits(CreateAPIView):
 class InsertIssues(CreateAPIView):
     serializer_class = serializers.RepositorySerializer
 
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Insert"])
     def post(self, request, *args, **kwargs):
         """
         Insert a new repository to server database
@@ -223,17 +251,19 @@ class InsertIssues(CreateAPIView):
             return Response({"success": True})
 
         except models.Repository.DoesNotExist as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 data={"error": f"{error}"}, status=status.HTTP_404_NOT_FOUND
             )
-        except:
+        except Exception as error:
+            send_feedback.send(f"Error {error}")
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class InsertPullRequests(CreateAPIView):
     serializer_class = serializers.RepositorySerializer
 
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Insert"])
     def post(self, request, *args, **kwargs):
         """
         Insert a new repository to server database
@@ -260,18 +290,20 @@ class InsertPullRequests(CreateAPIView):
             return Response({"success": True})
 
         except models.Repository.DoesNotExist as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 data={"error": f"{error}"}, status=status.HTTP_404_NOT_FOUND
             )
-        except:
+        except Exception as error:
+            send_feedback.send(f"Error {error}")
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class GetRepositoryMetrics(CreateAPIView):
     serializer_class = serializers.RepositorySerializer
 
-    @swagger_auto_schema(tags=["Endpoints"])
-    def post(self, request):
+    @swagger_auto_schema(tags=["Insert"])
+    def post(self, request, *args, **kwargs):
         """
         Return metrics information from target repository
         """
@@ -307,13 +339,14 @@ class GetRepositoryMetrics(CreateAPIView):
                 {"metrics": utils.without_keys(metrics_data, ["repository"])}
             )
         except models.Repository.DoesNotExist as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
             )
 
 
 class GetRepositoryCommits(APIView):
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Retrieve"])
     def get(self, request, owner, repository):
         """
         Return a list of commits from target repository
@@ -336,13 +369,14 @@ class GetRepositoryCommits(APIView):
                 }
             )
         except models.Repository.DoesNotExist as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
             )
 
 
 class GetRepositoryIssues(APIView):
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Retrieve"])
     def get(self, request, owner, repository):
         """
         Return a list of issues from target repository
@@ -365,6 +399,7 @@ class GetRepositoryIssues(APIView):
                 }
             )
         except models.Repository.DoesNotExist as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
             )
@@ -372,7 +407,7 @@ class GetRepositoryIssues(APIView):
 
 class GetRepositoryPullRequests(APIView):
     @swagger_auto_schema(
-        tags=["Endpoints"],
+        tags=["Retrieve"],
     )
     def get(self, request, owner, repository):
         """
@@ -396,13 +431,14 @@ class GetRepositoryPullRequests(APIView):
                 }
             )
         except models.Repository.DoesNotExist as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
             )
 
 
 class GetRepositoryClassification(APIView):
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Retrieve"])
     def get(self, request, owner, repository):
         """
         Return `true` if repository is a valid repository for studies or `false` otherwise
@@ -426,13 +462,14 @@ class GetRepositoryClassification(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
         except models.Repository.DoesNotExist as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
             )
 
 
 class GetGlobalUsers(APIView):
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Retrieve"])
     def get(self, request):
         """
         Return a list of users from all repositories
@@ -446,7 +483,7 @@ class GetGlobalUsers(APIView):
 
 
 class GetRepositoryUsers(APIView):
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Retrieve"])
     def get(self, request, owner, repository):
         """
         Return a list of users from target repository
@@ -466,6 +503,7 @@ class GetRepositoryUsers(APIView):
                 }
             )
         except models.Repository.DoesNotExist as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 data={"error": str(error)}, status=status.HTTP_404_NOT_FOUND
             )
@@ -474,7 +512,7 @@ class GetRepositoryUsers(APIView):
 class LocalLinkRepositoryUsersSimple(CreateAPIView):
     serializer_class = serializers.RepositorySerializer
 
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Insert"])
     def post(self, request, *args, **kwargs):
         """
         Return a list of users with links from target repository
@@ -495,6 +533,7 @@ class LocalLinkRepositoryUsersSimple(CreateAPIView):
             models.LocalMapIdentification.DoesNotExist,
             models.Identification.DoesNotExist,
         ) as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 status=status.HTTP_404_NOT_FOUND, data={"error": f"{error}"}
             )
@@ -503,7 +542,7 @@ class LocalLinkRepositoryUsersSimple(CreateAPIView):
 class LocalLinkRepositoryUsersBird(CreateAPIView):
     serializer_class = serializers.RepositorySerializer
 
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Insert"])
     def post(self, request, *args, **kwargs):
         """
         Return a list of users with links from target repository
@@ -524,6 +563,7 @@ class LocalLinkRepositoryUsersBird(CreateAPIView):
             models.LocalMapIdentification.DoesNotExist,
             models.Identification.DoesNotExist,
         ) as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 status=status.HTTP_404_NOT_FOUND, data={"error": f"{error}"}
             )
@@ -532,7 +572,7 @@ class LocalLinkRepositoryUsersBird(CreateAPIView):
 class LocalLinkRepositoryUsersImproved(CreateAPIView):
     serializer_class = serializers.RepositorySerializer
 
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Insert"])
     def post(self, request, *args, **kwargs):
         """
         Return a list of users with links from target repository
@@ -553,13 +593,14 @@ class LocalLinkRepositoryUsersImproved(CreateAPIView):
             models.LocalMapIdentification.DoesNotExist,
             models.Identification.DoesNotExist,
         ) as error:
+            send_feedback.send(f"Error {error}")
             return Response(
                 status=status.HTTP_404_NOT_FOUND, data={"error": f"{error}"}
             )
 
 
 class DownloadSingleRepository(APIView):
-    @swagger_auto_schema(tags=["Endpoints"])
+    @swagger_auto_schema(tags=["Retrieve"])
     def get(self, request, owner, repository):
         path = f"cloned_repositories/{owner}/{repository}"
         print(f"{BASE_DIR}/{path}")

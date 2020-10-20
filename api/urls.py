@@ -70,10 +70,10 @@ urlpatterns = [
         "get_all_users",
         views.GetGlobalUsers.as_view(),
     ),
-    path(
-        "delete_all_repositories",
-        views.DeleteAllRepositories.as_view(),
-    ),
+    # path(
+    #     "delete_all_repositories",
+    #     views.DeleteAllRepositories.as_view(),
+    # ),
     path(
         "clone_repository",
         views.CloneRepository.as_view(),

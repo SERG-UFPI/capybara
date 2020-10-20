@@ -1,6 +1,6 @@
-django
+django==3.1.1
 pylint-django
-djangorestframework
+djangorestframework==3.11.1
 drf-yasg
 markdown
 psycopg2-binary
