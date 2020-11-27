@@ -72,24 +72,25 @@ def get_num_files(owner, repository):
 
 def run_query(query, tokens):
     list_tokens = tokens
+    while True:
+        for token in list_tokens[:]:
+            try:
+                _header = {"Authorization": f"Bearer {token}"}
+                request = requests.post(
+                    consts.BASE_URL, json={"query": query}, headers=_header
+                )
 
-    for token in list_tokens[:]:
-        try:
-            _header = {"Authorization": f"Bearer {token}"}
-            request = requests.post(
-                consts.BASE_URL, json={"query": query}, headers=_header
-            )
+                if request.status_code == 200:
+                    return request.json()
 
-            if request.status_code == 200:
-                return request.json()
-
-            raise Exception(
-                f'Query failed to run by returning code of {request.status_code}\nMessage: "{request.content}"'
-            )
-        except Exception as error:
-            print(error)
-            list_tokens.insert(-1, list_tokens.pop())
-            continue
+                raise Exception(
+                    f'Query failed to run by returning code of {request.status_code}\nMessage: "{request.content}"'
+                )
+            except Exception as error:
+                print(error)
+                list_tokens.insert(-1, list_tokens.pop())
+                continue
+        return None
 
 
 def parse_json(file):

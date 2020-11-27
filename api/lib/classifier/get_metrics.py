@@ -74,13 +74,18 @@ def retrieve_commits(owner, repository):
     ).values("author", "authorDate", "message")
 
     for commit in commits_retrieved:
-        user = commit["author"]
-        i = user.find("<")
+        name = commit["author"]
+        email = name
+        if name is not None:
+            i = name.find("<")
+            email = name[(i + 1) : (len(name) - 1)]
+            name = name[0:i].strip()
 
-        name = user[0:i].strip()
-        email = user[(i + 1) : (len(user) - 1)]
         updated_on = commit["authorDate"]
         message = commit["message"]
+
+        if name is None or email is None or message is None or updated_on is None:
+            continue
 
         item = {
             "updated_on": updated_on,
@@ -101,9 +106,22 @@ def retrieve_issues(owner, repository):
     ).values()
 
     for issue in issues_retrieved:
-        name = issue["author"]["name"]
-        email = issue["author"]["email"]
+        name = issue.get("author", None)
+        if name is not None:
+            name = name.get("name", None)
+
+        email = issue.get("author", None)
+        if name is not None:
+            name = name.get("email", None)
+
+        updated_on = issue
+        if name is not None:
+            name = name.get("createdAt", None)
+
         updated_on = issue["createdAt"]
+
+        if name is None or email is None or updated_on is None:
+            continue
 
         item = {
             "updated_on": updated_on,

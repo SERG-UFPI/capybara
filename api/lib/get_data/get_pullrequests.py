@@ -16,16 +16,17 @@ def get_pullrequests(owner, repository):
         )
         init = time.time()
         result = utils.run_query(query, tokens)
-        if result:
-            pullrequests += result["data"]["repository"]["pullRequests"]["nodes"]
-            has_next = result["data"]["repository"]["pullRequests"]["pageInfo"][
-                "hasNextPage"
-            ]
-            cursor = result["data"]["repository"]["pullRequests"]["pageInfo"][
-                "endCursor"
-            ]
-            total_count = result["data"]["repository"]["pullRequests"]["totalCount"]
-            print(f"{len(pullrequests)} de {total_count} pullRequests recuperadas")
+        if result is None or result.get("data", None) is None:
+            print('Retrying get prs...')
+            time.sleep(15)
+            continue
+        pullrequests += result["data"]["repository"]["pullRequests"]["nodes"]
+        has_next = result["data"]["repository"]["pullRequests"]["pageInfo"][
+            "hasNextPage"
+        ]
+        cursor = result["data"]["repository"]["pullRequests"]["pageInfo"]["endCursor"]
+        total_count = result["data"]["repository"]["pullRequests"]["totalCount"]
+        print(f"{len(pullrequests)} de {total_count} pullRequests recuperadas")
         print(f"Foram usados {time.time() - init} segundos")
         if not has_next:
             break

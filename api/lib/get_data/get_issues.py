@@ -16,12 +16,13 @@ def get_issues(owner, repository):
         )
         init = time.time()
         result = utils.run_query(query, tokens)
-        if result:
-            issues += result["data"]["repository"]["issues"]["nodes"]
-            has_next = result["data"]["repository"]["issues"]["pageInfo"]["hasNextPage"]
-            cursor = result["data"]["repository"]["issues"]["pageInfo"]["endCursor"]
-            total_count = result["data"]["repository"]["issues"]["totalCount"]
-            print(f"{len(issues)} de {total_count} issues recuperadas")
+        if result is None or result.get("data", None) is None:
+            continue
+        issues += result["data"]["repository"]["issues"]["nodes"]
+        has_next = result["data"]["repository"]["issues"]["pageInfo"]["hasNextPage"]
+        cursor = result["data"]["repository"]["issues"]["pageInfo"]["endCursor"]
+        total_count = result["data"]["repository"]["issues"]["totalCount"]
+        print(f"{len(issues)} de {total_count} issues recuperadas")
         print(f"Foram usados {time.time() - init} segundos")
         if not has_next:
             break

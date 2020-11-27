@@ -6,6 +6,7 @@ import requests
 from github import RateLimitExceededException
 from django.views import generic
 from django.http import HttpResponse
+from django.db.models import Count, Q
 from github import GithubException
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -36,10 +37,37 @@ class GetAllRepositorys(APIView):
         Return a list of repositories from the server database
         """
         repositories = models.Repository.objects.all()
-        serializer = serializers.RepositoriesSerializer(repositories, many=True)
-        return Response(
-            {"totalCount": len(serializer.data), "repositories": serializer.data}
-        )
+
+        result = []
+        # serializer = serializers.RepositoriesSerializer(repositories, many=True)
+
+        # repositories = serializer.data
+        for repository in repositories:
+            commits_retrieved = models.Commit.objects.filter(
+                repository=repository.pk
+            ).count()
+            issues_retrieved = models.Issue.objects.filter(
+                repository=repository.pk
+            ).count()
+            prs_retrieved = models.PullRequest.objects.filter(
+                repository=repository.pk
+            ).count()
+
+            serializer = serializers.RepositoriesSerializer(repository)
+
+            _temp = dict(serializer.data)
+
+            _temp.update(
+                {
+                    "commits": commits_retrieved,
+                    "issues": issues_retrieved,
+                    "pull_requests": prs_retrieved,
+                }
+            )
+
+            result.append(_temp)
+
+        return Response({"totalCount": len(repositories), "repositories": result})
 
 
 class GetSingleRepository(APIView):
@@ -52,6 +80,29 @@ class GetSingleRepository(APIView):
             repository_retrieved = models.Repository.objects.get(
                 owner=owner, repository=repository
             )
+            commits_retrieved = models.Commit.objects.filter(
+                repository=repository_retrieved.pk
+            ).count()
+            issues_retrieved = models.Issue.objects.filter(
+                repository=repository_retrieved.pk
+            ).count()
+            prs_retrieved = models.PullRequest.objects.filter(
+                repository=repository_retrieved.pk
+            ).count()
+
+            serializer = serializers.RepositorySerializer(repository_retrieved)
+
+            _return = dict(serializer.data)
+
+            _return.update(
+                {
+                    "commits": commits_retrieved,
+                    "issues": issues_retrieved,
+                    "pull_requests": prs_retrieved,
+                }
+            )
+
+            return Response(_return)
         except models.Repository.DoesNotExist as error:
             send_feedback.send(f"Error {error}")
             return Response(
@@ -59,6 +110,7 @@ class GetSingleRepository(APIView):
             )
 
         serializer = serializers.FullRepositorySerializer(repository_retrieved)
+
         return Response(serializer.data)
 
 
@@ -295,6 +347,7 @@ class InsertPullRequests(CreateAPIView):
                 data={"error": f"{error}"}, status=status.HTTP_404_NOT_FOUND
             )
         except Exception as error:
+            traceback.print_exc()
             send_feedback.send(f"Error {error}")
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
